@@ -2,7 +2,9 @@ import type {
   SimulationLinkDatum,
   SimulationNodeDatum,
 } from "d3-force";
+import { hubAssociations, type HubRelationType } from "@/lib/hub-associations";
 import { hubNodes, rootNodeId, type HubNode } from "@/lib/hub-graph";
+import { assertValidHubGraph } from "@/lib/hub-graph-validation";
 
 export type HubWorldNode = SimulationNodeDatum & {
   id: string;
@@ -22,6 +24,8 @@ export type HubWorldLink = SimulationLinkDatum<HubWorldNode> & {
   depth: number;
   relation: "hierarchy" | "backbone" | "association";
   label?: string;
+  associationType?: HubRelationType;
+  influencesLayout?: boolean;
 };
 
 export type HubWorld = {
@@ -41,21 +45,6 @@ const ZONE_ANCHORS: Record<string, { x: number; y: number; angle: number }> = {
   troa: { x: 108, y: -112, angle: -0.72 },
   ryu: { x: 162, y: 94, angle: 0.44 },
 };
-
-const ASSOCIATIONS = [
-  { source: "coolify", target: "live-projects", label: "deploys" },
-  { source: "uptime-kuma", target: "live-projects", label: "monitors" },
-  { source: "uptime-kuma", target: "profile", label: "monitors" },
-  { source: "penpot", target: "design-studies", label: "designs" },
-  { source: "profile", target: "live-projects", label: "presents" },
-  { source: "blog", target: "experiments", label: "documents" },
-  { source: "open-source", target: "experiments", label: "explores" },
-  { source: "troa-devops", target: "coolify", label: "informs" },
-  { source: "troa-observability", target: "uptime-kuma", label: "observes" },
-  { source: "troa-software", target: "ryu-software", label: "shares practice" },
-  { source: "troa-devops", target: "ryu-infrastructure", label: "supports" },
-  { source: "troa-documentation", target: "blog", label: "knowledge" },
-] as const;
 
 function roundCoordinate(value: number) {
   return Math.round(value * 10_000) / 10_000;
@@ -94,6 +83,8 @@ function childPlacement(
 }
 
 export function createHubWorld(): HubWorld {
+  assertValidHubGraph();
+
   const nodes: HubWorldNode[] = [];
   const links: HubWorldLink[] = [];
   const associations: HubWorldLink[] = [];
@@ -177,7 +168,7 @@ export function createHubWorld(): HubWorld {
     });
   }
 
-  for (const association of ASSOCIATIONS) {
+  for (const association of hubAssociations) {
     const source = nodes.find((node) => node.id === association.source);
     const target = nodes.find((node) => node.id === association.target);
     if (!source || !target) continue;
@@ -189,6 +180,8 @@ export function createHubWorld(): HubWorld {
       depth: Math.max(source.depth, target.depth),
       relation: "association",
       label: association.label,
+      associationType: association.type,
+      influencesLayout: association.influencesLayout,
     });
   }
 

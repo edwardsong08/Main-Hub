@@ -392,7 +392,7 @@ export function useHubForce(world: HubWorld, reducedMotion: boolean) {
       ...world.links.filter(
         (link) => link.depth > 1 || link.relation === "backbone",
       ),
-      ...world.associations,
+      ...world.associations.filter((link) => link.influencesLayout),
     ];
     const physicsEdges = forceLinks.map((link) => ({
       source: getWorldNodeId(link.source),

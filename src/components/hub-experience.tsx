@@ -16,12 +16,15 @@ import {
 import { useHubForce } from "@/hooks/use-hub-force";
 import {
   getChildren,
+  getNodeMetaSummary,
   getNodePath,
   getParentId,
+  getNodePrimaryStateLabel,
+  getNodeSignal,
   hubNodes,
   rootNodeId,
-  statusLabels,
-  type HubNodeStatus,
+  signalLabels,
+  type HubNodeSignal,
 } from "@/lib/hub-graph";
 import {
   createHubWorld,
@@ -34,28 +37,191 @@ import {
 type ViewMode = "map" | "index";
 type NodePresence = "focus" | "active" | "descendant" | "ancestor" | "remote";
 type WheelDirection = -1 | 1;
+type MapViewportProfile = "desktop" | "compact-portrait" | "compact-landscape";
+type WorldPoint = { x: number; y: number };
 
-const VIEWBOX = { x: -590, y: -450, width: 1180, height: 900 };
+const CAMERA_FRAMES: Record<
+  MapViewportProfile,
+  { x: number; y: number; width: number; height: number }
+> = {
+  desktop: { x: -590, y: -450, width: 1180, height: 900 },
+  "compact-portrait": { x: -250, y: -540, width: 500, height: 1080 },
+  "compact-landscape": { x: -520, y: -250, width: 1040, height: 500 },
+};
 
-function statusClass(status: HubNodeStatus) {
-  return `status-${status}`;
+const WORLD_PROJECTIONS: Record<
+  MapViewportProfile,
+  { scaleX: number; scaleY: number }
+> = {
+  desktop: { scaleX: 1, scaleY: 1 },
+  "compact-portrait": { scaleX: 0.58, scaleY: 1.38 },
+  "compact-landscape": { scaleX: 1.02, scaleY: 0.72 },
+};
+
+function statusClass(signal: HubNodeSignal) {
+  return `status-${signal}`;
 }
 
-const glowColors: Record<HubNodeStatus, string> = {
-  operational: "rgb(201 255 99)",
-  building: "rgb(117 223 210)",
-  observing: "rgb(173 156 255)",
-  private: "rgb(243 189 99)",
+const atmosphereColors: Record<HubNodeSignal, string> = {
+  operational: "rgb(178 204 132)",
+  building: "rgb(129 190 182)",
+  active: "rgb(158 150 199)",
+  private: "rgb(204 167 108)",
+  unknown: "rgb(151 159 149)",
+  attention: "rgb(210 133 126)",
 };
+
+const atmosphereBlurProfiles = [
+  { depth: 1, haze: 44, bloom: 27 },
+  { depth: 2, haze: 29, bloom: 18 },
+  { depth: 3, haze: 21, bloom: 13 },
+] as const;
+
+const worldAtmosphereDefinitions = (
+  <defs>
+    {atmosphereBlurProfiles.flatMap(({ depth, haze, bloom }) => [
+      <filter
+        key={`haze-${depth}`}
+        id={`world-atmosphere-haze-${depth}`}
+        x="-125%"
+        y="-150%"
+        width="350%"
+        height="400%"
+        colorInterpolationFilters="linearRGB"
+      >
+        <feGaussianBlur stdDeviation={haze} />
+      </filter>,
+      <filter
+        key={`bloom-${depth}`}
+        id={`world-atmosphere-bloom-${depth}`}
+        x="-125%"
+        y="-150%"
+        width="350%"
+        height="400%"
+        colorInterpolationFilters="linearRGB"
+      >
+        <feGaussianBlur stdDeviation={bloom} />
+      </filter>,
+    ])}
+  </defs>
+);
 
 function renderCoordinate(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function cameraZoom(depth: number) {
-  if (depth === 0) return 1.18;
+function getViewportProfile(
+  width: number,
+  height: number,
+  coarsePointer: boolean,
+): MapViewportProfile {
+  if (
+    height <= 560 &&
+    width / Math.max(height, 1) >= 1.35 &&
+    (width <= 1100 || coarsePointer)
+  ) {
+    return "compact-landscape";
+  }
+  if (width <= 760) return "compact-portrait";
+  return "desktop";
+}
+
+function projectWorldPoint(
+  point: WorldPoint,
+  profile: MapViewportProfile,
+): WorldPoint {
+  const projection = WORLD_PROJECTIONS[profile];
+  return {
+    x: point.x * projection.scaleX,
+    y: point.y * projection.scaleY,
+  };
+}
+
+function unprojectWorldPoint(
+  point: WorldPoint,
+  profile: MapViewportProfile,
+): WorldPoint {
+  const projection = WORLD_PROJECTIONS[profile];
+  return {
+    x: point.x / projection.scaleX,
+    y: point.y / projection.scaleY,
+  };
+}
+
+function projectWorldAngle(angle: number, profile: MapViewportProfile) {
+  const projection = WORLD_PROJECTIONS[profile];
+  return Math.atan2(
+    Math.sin(angle) * projection.scaleY,
+    Math.cos(angle) * projection.scaleX,
+  );
+}
+
+function cameraZoom(depth: number, profile: MapViewportProfile) {
+  if (profile === "desktop") {
+    if (depth === 0) return 1.25;
+    if (depth === 1) return 1.72;
+    return 2.55;
+  }
+  if (profile === "compact-portrait") {
+    if (depth === 0) return 1.45;
+    if (depth === 1) return 1.72;
+    return 2.25;
+  }
+  if (depth === 0) return 1.24;
   if (depth === 1) return 1.72;
-  return 2.55;
+  return 2.45;
+}
+
+function selectedCameraZoom(depth: number, profile: MapViewportProfile) {
+  if (profile === "compact-portrait") return depth >= 3 ? 2.8 : 2.45;
+  if (profile === "compact-landscape") return depth >= 3 ? 3.25 : 2.8;
+  return depth >= 3 ? 3.65 : 3.15;
+}
+
+function fitCameraToImmediateChildren(
+  world: HubWorld,
+  focusId: string,
+  profile: MapViewportProfile,
+  cameraFrame: { width: number; height: number },
+  cameraTarget: WorldPoint,
+  desiredZoom: number,
+) {
+  if (profile === "desktop") return desiredZoom;
+
+  const focusNode = world.nodeById.get(focusId);
+  if (!focusNode) return desiredZoom;
+
+  const framingNodes = [
+    focusNode,
+    ...(focusNode.data.children ?? [])
+      .map((id) => world.nodeById.get(id))
+      .filter((node): node is HubWorldNode => Boolean(node)),
+  ];
+  const horizontalMargin = profile === "compact-portrait" ? 76 : 70;
+  const verticalMargin = profile === "compact-portrait" ? 82 : 48;
+  let requiredHalfWidth = horizontalMargin;
+  let requiredHalfHeight = verticalMargin;
+
+  for (const node of framingNodes) {
+    const point = projectWorldPoint(
+      { x: node.x ?? node.baseX, y: node.y ?? node.baseY },
+      profile,
+    );
+    requiredHalfWidth = Math.max(
+      requiredHalfWidth,
+      Math.abs(point.x - cameraTarget.x) + horizontalMargin,
+    );
+    requiredHalfHeight = Math.max(
+      requiredHalfHeight,
+      Math.abs(point.y - cameraTarget.y) + verticalMargin,
+    );
+  }
+
+  const childSafeZoom = Math.min(
+    cameraFrame.width / (requiredHalfWidth * 2),
+    cameraFrame.height / (requiredHalfHeight * 2),
+  );
+  return Math.min(desiredZoom, childSafeZoom);
 }
 
 function getCameraTarget(
@@ -141,6 +307,7 @@ function ModeToggle({
 
 function WorldNode({
   node,
+  viewportProfile,
   presence,
   isSelected,
   isIntent,
@@ -150,6 +317,7 @@ function WorldNode({
   onHover,
 }: {
   node: HubWorldNode;
+  viewportProfile: MapViewportProfile;
   presence: NodePresence;
   isSelected: boolean;
   isIntent: boolean;
@@ -160,26 +328,32 @@ function WorldNode({
 }) {
   const active = presence === "active";
   const isCluster = Boolean(node.data.children?.length);
-  const x = renderCoordinate(node.x ?? node.baseX);
-  const y = renderCoordinate(node.y ?? node.baseY);
+  const signal = getNodeSignal(node.data);
+  const projectedPoint = projectWorldPoint(
+    { x: node.x ?? node.baseX, y: node.y ?? node.baseY },
+    viewportProfile,
+  );
+  const x = renderCoordinate(projectedPoint.x);
+  const y = renderCoordinate(projectedPoint.y);
   const coreRadius = node.depth === 0 ? 8 : node.depth === 1 ? 6.5 : node.depth === 2 ? 4.4 : 2.6;
   const radialLabel = active && node.depth > 0;
   const labelDistance = node.depth <= 1 ? 32 : 22;
+  const outwardAngle = projectWorldAngle(node.outwardAngle, viewportProfile);
   const labelX = Number(
-    (radialLabel ? Math.cos(node.outwardAngle) * labelDistance : 0).toFixed(4),
+    (radialLabel ? Math.cos(outwardAngle) * labelDistance : 0).toFixed(4),
   );
   const labelY = Number(
     (radialLabel
-      ? Math.sin(node.outwardAngle) * labelDistance + 2
+      ? Math.sin(outwardAngle) * labelDistance + 2
       : node.depth <= 1
         ? 31
         : 22
     ).toFixed(4),
   );
   const labelAnchor = radialLabel
-    ? Math.cos(node.outwardAngle) > 0.28
+    ? Math.cos(outwardAngle) > 0.28
       ? "start"
-      : Math.cos(node.outwardAngle) < -0.28
+      : Math.cos(outwardAngle) < -0.28
         ? "end"
         : "middle"
     : "middle";
@@ -194,13 +368,13 @@ function WorldNode({
         active ? "is-interactive" : ""
       } ${isSelected ? "is-selected" : ""} ${isIntent ? "is-intent" : ""} ${
         isPreview ? "is-preview" : ""
-      } ${statusClass(node.data.status)}`}
+      } ${statusClass(signal)}`}
       transform={`translate(${x} ${y})`}
       role={active ? "button" : undefined}
       tabIndex={active ? 0 : undefined}
       aria-label={
         active
-          ? `${node.data.label}, ${statusLabels[node.data.status]}${
+          ? `${node.data.label}, ${getNodeMetaSummary(node.data)}${
               isCluster ? ", enter zone" : ""
             }`
           : undefined
@@ -218,7 +392,18 @@ function WorldNode({
         }
       }}
     >
-      <circle className="world-node-hit" r={active ? 28 : 12} />
+      <circle
+        className="world-node-hit"
+        r={
+          active
+            ? viewportProfile === "compact-portrait"
+              ? 46
+              : viewportProfile === "compact-landscape"
+                ? 35
+                : 28
+            : 12
+        }
+      />
       {isCluster ? (
         <circle className="world-node-orbit" r={coreRadius * 3.1} />
       ) : null}
@@ -237,9 +422,61 @@ function WorldNode({
           <text className="world-node-meta" textAnchor={labelAnchor} y="9">
             {isCluster
               ? `${node.data.children?.length ?? 0} signals`
-              : statusLabels[node.data.status]}
+              : getNodePrimaryStateLabel(node.data)}
           </text>
         ) : null}
+      </g>
+    </g>
+  );
+}
+
+function WorldAtmosphere({
+  node,
+  viewportProfile,
+  isVisible,
+}: {
+  node: HubWorldNode;
+  viewportProfile: MapViewportProfile;
+  isVisible: boolean;
+}) {
+  const projectedPoint = projectWorldPoint(
+    { x: node.x ?? node.baseX, y: node.y ?? node.baseY },
+    viewportProfile,
+  );
+  const x = renderCoordinate(projectedPoint.x);
+  const y = renderCoordinate(projectedPoint.y);
+  const radius = node.depth === 1 ? 125 : node.depth === 2 ? 82 : 58;
+  const angle = renderCoordinate(
+    (projectWorldAngle(node.outwardAngle, viewportProfile) * 180) / Math.PI,
+  );
+  const signal = getNodeSignal(node.data);
+
+  return (
+    <g
+      className={`world-node-atmosphere depth-${node.depth} ${
+        isVisible ? "is-visible" : ""
+      }`}
+      data-node-id={node.id}
+      transform={`translate(${x} ${y})`}
+      aria-hidden="true"
+    >
+      <g className="world-node-atmosphere-field">
+        <ellipse
+          className="world-node-atmosphere-haze"
+          rx={renderCoordinate(radius * 0.68)}
+          ry={renderCoordinate(radius * 0.52)}
+          transform={`rotate(${renderCoordinate(angle - 18)})`}
+          fill="rgb(226 230 218)"
+          filter={`url(#world-atmosphere-haze-${node.depth})`}
+        />
+        <ellipse
+          className="world-node-atmosphere-bloom"
+          rx={renderCoordinate(radius * 0.56)}
+          ry={renderCoordinate(radius * 0.4)}
+          transform={`rotate(${angle})`}
+          fill={atmosphereColors[signal]}
+          filter={`url(#world-atmosphere-bloom-${node.depth})`}
+        />
       </g>
     </g>
   );
@@ -256,14 +493,16 @@ function MapView({
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [intentId, setIntentId] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [viewportProfile, setViewportProfile] =
+    useState<MapViewportProfile>("desktop");
   const wheelGesture = useRef<{
     direction: WheelDirection | null;
     accumulated: number;
     lastAt: number;
-    navigated: boolean;
-  }>({ direction: null, accumulated: 0, lastAt: 0, navigated: false });
+  }>({ direction: null, accumulated: 0, lastAt: 0 });
+  const focusIdRef = useRef(focusId);
+  const selectedIdRef = useRef<string | null>(selectedId);
   const mapStageRef = useRef<HTMLDivElement>(null);
-  const contextGlowRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const worldGroupRef = useRef<SVGGElement>(null);
   const pointerSample = useRef<{ x: number; y: number; time: number } | null>(
@@ -272,6 +511,39 @@ function MapView({
   const hoverReleaseTimer = useRef<number | null>(null);
   const reducedMotion = useReducedMotion();
   const { setPointer, settleNode } = useHubForce(world, Boolean(reducedMotion));
+
+  useEffect(() => {
+    focusIdRef.current = focusId;
+    selectedIdRef.current = selectedId;
+  }, [focusId, selectedId]);
+
+  useEffect(() => {
+    const stage = mapStageRef.current;
+    if (!stage) return;
+
+    const coarsePointer = window.matchMedia("(pointer: coarse)");
+    const updateProfile = () => {
+      const bounds = stage.getBoundingClientRect();
+      const nextProfile = getViewportProfile(
+        bounds.width,
+        bounds.height,
+        coarsePointer.matches,
+      );
+      setViewportProfile((current) =>
+        current === nextProfile ? current : nextProfile,
+      );
+    };
+    const resizeObserver = new ResizeObserver(updateProfile);
+
+    resizeObserver.observe(stage);
+    coarsePointer.addEventListener("change", updateProfile);
+    updateProfile();
+
+    return () => {
+      resizeObserver.disconnect();
+      coarsePointer.removeEventListener("change", updateProfile);
+    };
+  }, []);
 
   useEffect(
     () => () => {
@@ -312,68 +584,35 @@ function MapView({
     ? world.nodeById.get(selectedId)
     : null;
   const cameraTarget = useMemo(
-    () => getCameraTarget(world, focusId, selectedId),
-    [focusId, selectedId, world],
+    () =>
+      projectWorldPoint(
+        getCameraTarget(world, focusId, selectedId),
+        viewportProfile,
+      ),
+    [focusId, selectedId, viewportProfile, world],
   );
+  const cameraFrame = CAMERA_FRAMES[viewportProfile];
+  const desiredZoom = selectedWorldNode
+    ? selectedCameraZoom(selectedWorldNode.depth, viewportProfile)
+    : cameraZoom(focusNode.depth, viewportProfile);
   const zoom = selectedWorldNode
-    ? selectedWorldNode.depth >= 3
-      ? 3.65
-      : 3.15
-    : cameraZoom(focusNode.depth);
+    ? desiredZoom
+    : fitCameraToImmediateChildren(
+        world,
+        focusId,
+        viewportProfile,
+        cameraFrame,
+        cameraTarget,
+        desiredZoom,
+      );
   const visibleDepth = selectedWorldNode?.depth ?? focusNode.depth;
-  const cameraWidth = VIEWBOX.width / zoom;
-  const cameraHeight = VIEWBOX.height / zoom;
+  const contextNodeId =
+    selectedWorldNode?.id ?? (focusId === rootNodeId ? null : focusNode.id);
+  const cameraWidth = cameraFrame.width / zoom;
+  const cameraHeight = cameraFrame.height / zoom;
   const cameraViewBox = `${renderCoordinate(cameraTarget.x - cameraWidth / 2)} ${
     renderCoordinate(cameraTarget.y - cameraHeight / 2)
   } ${cameraWidth} ${cameraHeight}`;
-
-  function updateContextGlow(
-    clientX: number,
-    clientY: number,
-    status: HubNodeStatus,
-  ) {
-    const glow = contextGlowRef.current;
-    const stage = mapStageRef.current;
-    if (!glow || !stage) return;
-
-    const bounds = stage.getBoundingClientRect();
-    glow.style.setProperty("--context-glow-x", `${clientX - bounds.left}px`);
-    glow.style.setProperty("--context-glow-y", `${clientY - bounds.top}px`);
-    glow.style.setProperty("--context-glow-color", glowColors[status]);
-    glow.dataset.mode = "node";
-    glow.dataset.depth = String(visibleDepth);
-  }
-
-  useEffect(() => {
-    const glow = contextGlowRef.current;
-    if (!glow) return;
-
-    glow.dataset.depth = String(visibleDepth);
-    glow.dataset.selected = selectedWorldNode ? "true" : "false";
-    if (visibleDepth === 0) {
-      glow.dataset.mode = "idle";
-      return;
-    }
-
-    const anchor = selectedWorldNode ?? focusNode;
-    const animationFrame = window.requestAnimationFrame(() => {
-      const svg = svgRef.current;
-      const matrix = worldGroupRef.current?.getScreenCTM();
-      if (!svg || !matrix) return;
-
-      const point = svg.createSVGPoint();
-      point.x = anchor.x ?? anchor.baseX;
-      point.y = anchor.y ?? anchor.baseY;
-      const screenPoint = point.matrixTransform(matrix);
-      updateContextGlow(
-        screenPoint.x,
-        screenPoint.y,
-        anchor.data.status,
-      );
-    });
-
-    return () => window.cancelAnimationFrame(animationFrame);
-  });
 
   function changeFocus(id: string) {
     if (hoverReleaseTimer.current) {
@@ -383,6 +622,8 @@ function MapView({
     setHoveredId(null);
     setIntentId(null);
     setSelectedId(null);
+    focusIdRef.current = id;
+    selectedIdRef.current = null;
     pointerSample.current = null;
     settleNode(null);
     setPointer(null);
@@ -394,7 +635,11 @@ function MapView({
       changeFocus(node.id);
       return;
     }
-    setSelectedId((current) => (current === node.id ? null : node.id));
+    setSelectedId((current) => {
+      const nextSelectedId = current === node.id ? null : node.id;
+      selectedIdRef.current = nextSelectedId;
+      return nextSelectedId;
+    });
   }
 
   function getPresence(node: HubWorldNode): NodePresence {
@@ -418,7 +663,10 @@ function MapView({
     const point = svg.createSVGPoint();
     point.x = clientX;
     point.y = clientY;
-    return point.matrixTransform(matrix.inverse());
+    return unprojectWorldPoint(
+      point.matrixTransform(matrix.inverse()),
+      viewportProfile,
+    );
   }
 
   function nearestActiveNode(point: { x: number; y: number }) {
@@ -444,46 +692,73 @@ function MapView({
 
     const now = event.timeStamp;
     const direction: WheelDirection = event.deltaY > 0 ? 1 : -1;
+    const deltaMagnitude =
+      Math.abs(event.deltaY) *
+      (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1);
     const gesture = wheelGesture.current;
     const isNewGesture = now - gesture.lastAt > 220;
     const isReversal = gesture.direction !== null && gesture.direction !== direction;
 
     if (isNewGesture || isReversal) {
       gesture.direction = direction;
-      gesture.accumulated = Math.abs(event.deltaY);
-      gesture.navigated = false;
+      gesture.accumulated = deltaMagnitude;
     } else {
-      gesture.accumulated += Math.abs(event.deltaY);
+      gesture.accumulated += deltaMagnitude;
     }
     gesture.lastAt = now;
 
-    if (gesture.navigated || gesture.accumulated < 24) return;
+    if (gesture.accumulated < 24) return;
+    gesture.accumulated = 0;
+
+    const currentFocusId = focusIdRef.current;
 
     if (direction > 0) {
-      if (selectedId) {
-        gesture.navigated = true;
+      if (selectedIdRef.current) {
+        selectedIdRef.current = null;
         setSelectedId(null);
         return;
       }
 
-      const parentId = getParentId(focusId);
+      const parentId = getParentId(currentFocusId);
       if (parentId) {
-        gesture.navigated = true;
         changeFocus(parentId);
       }
       return;
     }
 
     const wheelPoint = worldPointFromClient(event.clientX, event.clientY);
-    const nearest = wheelPoint ? nearestActiveNode(wheelPoint).node : null;
-    const candidateId = hoveredId ?? intentId ?? nearest?.id ?? null;
-    const candidate = candidateId ? world.nodeById.get(candidateId) : null;
-    if (!candidate || !activeIds.has(candidate.id)) return;
+    const currentActiveIds = new Set(
+      hubNodes[currentFocusId]?.children ?? [],
+    );
+    const currentActiveNodes = Array.from(currentActiveIds)
+      .map((id) => world.nodeById.get(id))
+      .filter((node): node is HubWorldNode => Boolean(node));
+    let nearest: HubWorldNode | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
 
-    gesture.navigated = true;
+    if (wheelPoint) {
+      for (const node of currentActiveNodes) {
+        const dx = (node.x ?? node.baseX) - wheelPoint.x;
+        const dy = (node.y ?? node.baseY) - wheelPoint.y;
+        const distance = dx * dx + dy * dy;
+        if (distance < nearestDistance) {
+          nearest = node;
+          nearestDistance = distance;
+        }
+      }
+    }
+
+    const contextualCandidateId = [hoveredId, intentId].find(
+      (id): id is string => Boolean(id && currentActiveIds.has(id)),
+    );
+    const candidateId = contextualCandidateId ?? nearest?.id ?? null;
+    const candidate = candidateId ? world.nodeById.get(candidateId) : null;
+    if (!candidate || !currentActiveIds.has(candidate.id)) return;
+
     if (candidate.data.children?.length) {
       changeFocus(candidate.id);
     } else {
+      selectedIdRef.current = candidate.id;
       setSelectedId(candidate.id);
     }
   }
@@ -546,16 +821,17 @@ function MapView({
   }
 
   return (
-    <section className="map-view" aria-label="Living systems map">
-      <div ref={mapStageRef} className="map-stage" onWheel={handleWheel}>
-        <div
-          ref={contextGlowRef}
-          className="map-context-glow"
-          data-mode="idle"
-          data-depth={visibleDepth}
-          data-selected="false"
-          aria-hidden="true"
-        />
+    <section
+      className="map-view"
+      data-viewport-profile={viewportProfile}
+      aria-label="Living systems map"
+    >
+      <div
+        ref={mapStageRef}
+        className="map-stage"
+        data-viewport-profile={viewportProfile}
+        onWheel={handleWheel}
+      >
         <div className="map-breadcrumbs" aria-label="Current map location">
           {path.map((node, index) => (
             <span key={node.id}>
@@ -574,7 +850,7 @@ function MapView({
         <motion.svg
           ref={svgRef}
           className="map-canvas world-canvas"
-          viewBox={`${VIEWBOX.x} ${VIEWBOX.y} ${VIEWBOX.width} ${VIEWBOX.height}`}
+          viewBox={`${cameraFrame.x} ${cameraFrame.y} ${cameraFrame.width} ${cameraFrame.height}`}
           animate={{ viewBox: cameraViewBox }}
           transition={
             reducedMotion
@@ -596,20 +872,38 @@ function MapView({
             setIntentId(null);
           }}
         >
-          <g
-            ref={worldGroupRef}
-            className="world-camera"
-          >
+          {worldAtmosphereDefinitions}
+          <g ref={worldGroupRef} className="world-camera">
+            <g className="world-atmospheres" aria-hidden="true">
+              {world.nodes.map((node) =>
+                node.id === rootNodeId ? null : (
+                  <WorldAtmosphere
+                    key={node.id}
+                    node={node}
+                    viewportProfile={viewportProfile}
+                    isVisible={contextNodeId === node.id}
+                  />
+                ),
+              )}
+            </g>
             <g className="world-associations" aria-hidden="true">
               {world.associations.map((link) => {
                 const source = world.nodeById.get(getWorldNodeId(link.source));
                 const target = world.nodeById.get(getWorldNodeId(link.target));
                 if (!source || !target) return null;
 
-                const sourceX = renderCoordinate(source.x ?? source.baseX);
-                const sourceY = renderCoordinate(source.y ?? source.baseY);
-                const targetX = renderCoordinate(target.x ?? target.baseX);
-                const targetY = renderCoordinate(target.y ?? target.baseY);
+                const sourcePoint = projectWorldPoint(
+                  { x: source.x ?? source.baseX, y: source.y ?? source.baseY },
+                  viewportProfile,
+                );
+                const targetPoint = projectWorldPoint(
+                  { x: target.x ?? target.baseX, y: target.y ?? target.baseY },
+                  viewportProfile,
+                );
+                const sourceX = renderCoordinate(sourcePoint.x);
+                const sourceY = renderCoordinate(sourcePoint.y);
+                const targetX = renderCoordinate(targetPoint.x);
+                const targetY = renderCoordinate(targetPoint.y);
                 const dx = targetX - sourceX;
                 const dy = targetY - sourceY;
                 const controlX = (sourceX + targetX) / 2 + dy * 0.14;
@@ -647,10 +941,18 @@ function MapView({
                 const target = world.nodeById.get(getWorldNodeId(link.target));
                 if (!source || !target) return null;
 
-                const sourceX = renderCoordinate(source.x ?? source.baseX);
-                const sourceY = renderCoordinate(source.y ?? source.baseY);
-                const targetX = renderCoordinate(target.x ?? target.baseX);
-                const targetY = renderCoordinate(target.y ?? target.baseY);
+                const sourcePoint = projectWorldPoint(
+                  { x: source.x ?? source.baseX, y: source.y ?? source.baseY },
+                  viewportProfile,
+                );
+                const targetPoint = projectWorldPoint(
+                  { x: target.x ?? target.baseX, y: target.y ?? target.baseY },
+                  viewportProfile,
+                );
+                const sourceX = renderCoordinate(sourcePoint.x);
+                const sourceY = renderCoordinate(sourcePoint.y);
+                const targetX = renderCoordinate(targetPoint.x);
+                const targetY = renderCoordinate(targetPoint.y);
                 const targetPresence = getPresence(target);
                 const bend = link.relation === "backbone" ? 0.1 : 0.045;
                 const controlX =
@@ -663,7 +965,7 @@ function MapView({
                     key={link.id}
                     d={`M ${sourceX} ${sourceY} Q ${controlX} ${controlY} ${targetX} ${targetY}`}
                     className={`world-link relation-${link.relation} depth-${link.depth} presence-${targetPresence} ${statusClass(
-                      target.data.status,
+                      getNodeSignal(target.data),
                     )} ${previewIds.has(target.id) ? "is-preview" : ""}`}
                   />
                 );
@@ -678,6 +980,7 @@ function MapView({
                   <WorldNode
                     key={node.id}
                     node={node}
+                    viewportProfile={viewportProfile}
                     presence={presence}
                     isSelected={selectedId === node.id}
                     isIntent={intentId === node.id}
@@ -695,11 +998,13 @@ function MapView({
         <div className="map-help" aria-hidden="true">
           <span className="scroll-mark"><i /></span>
           <span>
-            {intentId
-              ? `${hubNodes[intentId].shortLabel ?? hubNodes[intentId].label} territory`
-              : "move through a territory"}
+            {viewportProfile === "desktop"
+              ? intentId
+                ? `${hubNodes[intentId].shortLabel ?? hubNodes[intentId].label} territory`
+                : "move through a territory"
+              : "tap a territory"}
             <br />
-            scroll in · out
+            {viewportProfile === "desktop" ? "scroll in · out" : "use path to return"}
           </span>
         </div>
 
@@ -708,12 +1013,12 @@ function MapView({
           <span><i className="key-association" />association</span>
         </div>
 
-        <div className="map-legend" aria-label="Status legend">
-          {(["operational", "observing", "building", "private"] as const).map(
-            (status) => (
-              <span key={status}>
-                <i className={statusClass(status)} />
-                {statusLabels[status]}
+        <div className="map-legend" aria-label="Map signal legend">
+          {(["active", "building", "private", "unknown"] as const).map(
+            (signal) => (
+              <span key={signal}>
+                <i className={statusClass(signal)} />
+                {signalLabels[signal]}
               </span>
             ),
           )}
@@ -742,8 +1047,8 @@ function MapView({
               <h2>{selectedNode.label}</h2>
               <p>{selectedNode.description}</p>
               <div className="drawer-footer">
-                <span className={statusClass(selectedNode.status)}>
-                  {statusLabels[selectedNode.status]}
+                <span className={statusClass(getNodeSignal(selectedNode))}>
+                  {getNodeMetaSummary(selectedNode)}
                 </span>
                 {selectedNode.href ? (
                   <a href={selectedNode.href} target="_blank" rel="noreferrer">
@@ -791,9 +1096,9 @@ function IndexView({ onEnterZone }: { onEnterZone: (id: string) => void }) {
               <ul>
                 {zoneChildren.map((child) => (
                   <li key={child.id}>
-                    <span className={`index-status ${statusClass(child.status)}`} />
+                    <span className={`index-status ${statusClass(getNodeSignal(child))}`} />
                     <span>{child.label}</span>
-                    <small>{statusLabels[child.status]}</small>
+                    <small>{getNodeMetaSummary(child)}</small>
                   </li>
                 ))}
               </ul>

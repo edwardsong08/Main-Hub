@@ -91,6 +91,12 @@ export function validateHubGraph(): HubGraphValidationIssue[] {
         message: `Node ${node.id} cannot expose health for kind ${node.kind}.`,
       });
     }
+    if (node.statusSource === "manual" && !node.health) {
+      issues.push({
+        code: "manual-status-without-health",
+        message: `Node ${node.id} declares a manual status without health.`,
+      });
+    }
 
     for (const childId of childIds) {
       if (!hubNodes[childId]) {
@@ -142,10 +148,10 @@ export function validateHubGraph(): HubGraphValidationIssue[] {
       return;
     }
     if (reached.has(nodeId)) return;
-    if (depth > 3) {
+    if (depth > 4) {
       issues.push({
         code: "excessive-depth",
-        message: `Node ${nodeId} exceeds the supported three-level map depth.`,
+        message: `Node ${nodeId} exceeds the supported four-level map depth.`,
       });
     }
 

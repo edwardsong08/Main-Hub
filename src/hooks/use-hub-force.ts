@@ -123,7 +123,8 @@ function createPointerForce(
         continue;
       }
 
-      const mobility = node.depth === 1 ? 0.28 : node.depth === 2 ? 0.72 : 1;
+      const mobility =
+        node.depth === 1 ? 0.28 : node.depth === 2 ? 0.72 : node.depth === 3 ? 1 : 1.06;
       node.vx = (node.vx ?? 0) + impulse.x * mobility;
       node.vy = (node.vy ?? 0) + impulse.y * mobility;
     }
@@ -157,7 +158,8 @@ function createTetherForce(): Force<HubWorldNode, HubWorldLink> {
       const dx = node.x - node.baseX;
       const dy = node.y - node.baseY;
       const distance = Math.hypot(dx, dy) || 1;
-      const limit = node.depth === 1 ? 75 : node.depth === 2 ? 82 : 74;
+      const limit =
+        node.depth === 1 ? 75 : node.depth === 2 ? 82 : node.depth === 3 ? 74 : 62;
       if (distance <= limit) continue;
 
       const tension = (distance - limit) * alpha * 0.28;
@@ -218,8 +220,10 @@ function createAmbientForce(): Force<HubWorldNode, HubWorldLink> {
         node.id.charCodeAt(0) * 0.037 +
         node.id.charCodeAt(node.id.length - 1) * 0.011;
       const clusterSeed = clusterSeedById.get(node.id) ?? seed;
-      const pace = node.depth === 1 ? 0.31 : node.depth === 2 ? 0.48 : 0.68;
-      const localRadius = node.depth === 1 ? 6 : node.depth === 2 ? 10 : 14;
+      const pace =
+        node.depth === 1 ? 0.31 : node.depth === 2 ? 0.48 : node.depth === 3 ? 0.68 : 0.78;
+      const localRadius =
+        node.depth === 1 ? 6 : node.depth === 2 ? 10 : node.depth === 3 ? 14 : 12;
       const sharedPhase = phase * 0.38 + clusterSeed;
       const sharedX = Math.sin(sharedPhase) * 34;
       const sharedY = Math.cos(sharedPhase) * 30;
@@ -270,7 +274,8 @@ function linkDistance(link: HubWorldLink) {
   if (link.relation === "backbone") return 188;
   if (link.relation === "association") return 122;
   if (link.depth === 2) return 102;
-  return 61;
+  if (link.depth === 3) return 62;
+  return 48;
 }
 
 function breathingLinkDistance(link: HubWorldLink, phase: number) {
@@ -290,13 +295,17 @@ function breathingLinkDistance(link: HubWorldLink, phase: number) {
             ? 0.055
             : link.depth === 2
               ? 0.2
-              : 0.31,
+              : link.depth === 3
+                ? 0.31
+                : 0.22,
       pace:
         link.relation === "backbone"
           ? 0.72
           : link.depth === 3
             ? 1.12
-            : 0.9,
+            : link.depth >= 4
+              ? 1.24
+              : 0.9,
       seed,
     };
     breathingProfileCache.set(link.id, profile);
@@ -346,7 +355,9 @@ function createElasticLinkForce(
           ? 0.00155
           : edge.depth === 2
             ? 0.002
-            : 0.00245;
+            : edge.depth === 3
+              ? 0.00245
+              : 0.0027;
       const impulse = (desired - distance) * gain * energyScale;
       const sourceShare = edge.relation === "backbone" ? 0.5 : 0.36;
       const targetShare = 1 - sourceShare;
@@ -371,7 +382,8 @@ function collisionRadius(node: HubWorldNode) {
   if (node.depth === 0) return 0;
   if (node.depth === 1) return 28;
   if (node.depth === 2) return 18;
-  return 10;
+  if (node.depth === 3) return 10;
+  return 8;
 }
 
 export function useHubForce(world: HubWorld, reducedMotion: boolean) {
@@ -423,7 +435,8 @@ export function useHubForce(world: HubWorld, reducedMotion: boolean) {
           if (node.depth === 0) return 0;
           if (node.depth === 1) return -112;
           if (node.depth === 2) return -68;
-          return -22;
+          if (node.depth === 3) return -22;
+          return -14;
         }),
       )
       .force(

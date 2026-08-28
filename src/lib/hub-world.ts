@@ -2,7 +2,11 @@ import type {
   SimulationLinkDatum,
   SimulationNodeDatum,
 } from "d3-force";
-import { hubAssociations, type HubRelationType } from "@/lib/hub-associations";
+import {
+  hubAssociations,
+  type HubNetworkFlow,
+  type HubRelationType,
+} from "@/lib/hub-associations";
 import { hubNodes, rootNodeId, type HubNode } from "@/lib/hub-graph";
 import { assertValidHubGraph } from "@/lib/hub-graph-validation";
 
@@ -25,6 +29,7 @@ export type HubWorldLink = SimulationLinkDatum<HubWorldNode> & {
   relation: "hierarchy" | "backbone" | "association";
   label?: string;
   associationType?: HubRelationType;
+  networkFlow?: HubNetworkFlow;
   influencesLayout?: boolean;
 };
 
@@ -39,12 +44,26 @@ export type HubWorld = {
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
 
 const ZONE_ANCHORS: Record<string, { x: number; y: number; angle: number }> = {
-  projects: { x: -162, y: -104, angle: -2.64 },
-  homelab: { x: -154, y: 112, angle: 2.56 },
-  personal: { x: -24, y: 18, angle: 2.94 },
-  troa: { x: 108, y: -112, angle: -0.72 },
-  ryu: { x: 162, y: 94, angle: 0.44 },
+  homelab: { x: -188, y: -122, angle: -2.42 },
+  projects: { x: -24, y: -158, angle: -1.34 },
+  personal: { x: -78, y: 10, angle: 0 },
+  troa: { x: 126, y: 18, angle: 0.04 },
+  ryu: { x: 18, y: 162, angle: 1.56 },
 };
+
+function getSubtreeSize(nodeId: string): number {
+  return 1 + (hubNodes[nodeId].children ?? []).reduce(
+    (total, childId) => total + getSubtreeSize(childId),
+    0,
+  );
+}
+
+const SUBTREE_SIZES = new Map(
+  (hubNodes[rootNodeId].children ?? []).map((nodeId) => [
+    nodeId,
+    getSubtreeSize(nodeId),
+  ]),
+);
 
 function roundCoordinate(value: number) {
   return Math.round(value * 10_000) / 10_000;
@@ -65,15 +84,57 @@ function childPlacement(
   parentDepth: number,
   index: number,
   count: number,
+  parentOutwardAngle: number,
 ) {
   const seed = hashString(`${parentId}:${childId}`);
   const parentSeed = hashString(parentId);
   const phase = (parentSeed % 6283) / 1000;
   const angleJitter = (((seed >>> 15) % 101) - 50) / 230;
-  const angle = phase + index * GOLDEN_ANGLE + count * 0.17 + angleJitter;
+  const ringAngle = phase + index * GOLDEN_ANGLE + count * 0.17 + angleJitter;
+  const usesTerritoryFan = parentDepth === 1 && parentId !== "personal";
+  const fanSpan =
+    parentId === "troa"
+      ? Math.PI * 1.08
+      : count >= 4
+        ? Math.PI * 0.9
+        : Math.PI * 0.78;
+  const fanPosition = count <= 1 ? 0 : index / (count - 1) - 0.5;
+  const angle = usesTerritoryFan
+    ? parentOutwardAngle + fanPosition * fanSpan + angleJitter * 0.42
+    : ringAngle;
   const jitter = ((seed >>> 8) % 31) - 15;
-  const radius = parentDepth === 1 ? 104 + jitter * 0.7 : 58 + jitter * 0.5;
-  const squash = parentDepth === 1 ? 0.74 : 0.82;
+  const densityThreshold = parentDepth === 1 ? 5 : parentDepth === 2 ? 4 : 3;
+  const densityStep = parentDepth === 1 ? 10 : parentDepth === 2 ? 8 : 7;
+  const densityExpansion =
+    parentDepth === 1
+      ? 0
+      : Math.max(0, count - densityThreshold) * densityStep;
+  const territoryMassRadius =
+    parentDepth === 1
+      ? 82 + Math.sqrt(SUBTREE_SIZES.get(parentId) ?? count + 1) * 8.5
+      : null;
+  const baseRadius =
+    parentDepth === 1
+      ? parentId === "personal"
+        ? 88
+        : (territoryMassRadius ?? 108)
+      : parentDepth === 2
+        ? 64
+        : 49;
+  const jitterScale = parentDepth === 1 ? 0.7 : parentDepth === 2 ? 0.5 : 0.38;
+  const radius = baseRadius + densityExpansion + jitter * jitterScale;
+  const squash =
+    parentId === "troa"
+      ? 0.96
+      : usesTerritoryFan
+        ? 0.92
+        : parentId === "personal"
+          ? 0.84
+      : parentDepth === 1
+        ? 0.78
+        : parentDepth === 2
+          ? 0.86
+          : 0.9;
 
   return {
     angle,
@@ -123,7 +184,14 @@ export function createHubWorld(): HubWorld {
     children.forEach((childId, index) => {
       const isRootChild = id === rootNodeId;
       const zoneAnchor = ZONE_ANCHORS[childId];
-      const placement = childPlacement(id, childId, depth, index, children.length);
+      const placement = childPlacement(
+        id,
+        childId,
+        depth,
+        index,
+        children.length,
+        outwardAngle,
+      );
       const childAngle = isRootChild
         ? (zoneAnchor?.angle ?? placement.angle)
         : placement.angle;
@@ -181,6 +249,7 @@ export function createHubWorld(): HubWorld {
       relation: "association",
       label: association.label,
       associationType: association.type,
+      networkFlow: association.networkFlow,
       influencesLayout: association.influencesLayout,
     });
   }

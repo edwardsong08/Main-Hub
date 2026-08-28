@@ -38,6 +38,16 @@ Initial monitored services:
 - Each currently live public project
 - Any public tool whose availability matters to visitors
 
+Current personal project monitors include ClaimChain and OpenBid. The published
+checks use their maintained live Vercel endpoints; their primary delivery
+platforms are AWS and Render respectively. Platform ownership and endpoint
+follow-up are documented in `PROJECT-STATUS.md`.
+
+TROA software is organized as `Software & Data` with Public Apps, Internal
+Tools, Community Platforms, Data Services, and Integrations beneath it. Exact
+monitor coverage and the temporary manual-status backlog are tracked in
+[TROA-SOFTWARE-STATUS.md](TROA-SOFTWARE-STATUS.md).
+
 Suggested groups:
 
 - Public websites
@@ -93,6 +103,16 @@ Initial editorial tasks:
 - Choose three projects that best represent current interests.
 - Decide which experiments are fun to share even if unfinished.
 - Write a plain-language summary and next step for every selected project.
+
+Current graph inventory:
+
+- Main Hub: Living Map, Status Integration, and Content Index
+- ClaimChain: Governed Workflows, Payments & Reconciliation, Document Export,
+  and planned Advisory ML
+- OpenBid (`realestatebidding` repository): Product Experience,
+  Authentication API, and the planned Auction Domain
+- VZW Transaction Ledger: Spring Application, PostgreSQL, Audit Chain, and
+  CI/CD
 
 ## Tools
 

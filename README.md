@@ -105,8 +105,37 @@ animate, and semantic relationships without network-flow metadata remain static.
 Each declared path records its direction from source to receiver; truly
 bidirectional integrations show counter-flow. The preference is stored locally,
 defaults off on compact screens, and is suppressed for reduced-motion users.
-The motion communicates intended topology and direction rather than measured
-packet telemetry.
+Each light follows a synchronized, gentle brightness envelope: dimmer at
+departure, brightest near mid-path, and softly fading at arrival. The motion
+communicates intended topology and direction rather than measured packet load.
+
+The same settings menu offers four locally persisted visual themes. `Signal
+Garden` is the unchanged default map palette; `Birthday Sprinkles` uses a light
+cream canvas and multicolor signals, `Silver Noir` uses a restrained grayscale
+system, and `Matcha Cappuccino` combines oat, matcha, and roasted-brown tones.
+Themes change presentation tokens only: content, graph structure, interaction,
+status meaning, and network-flow behavior remain consistent.
+
+The alternate Index view has a matching editorial identity for each palette:
+Signal Garden uses a restrained node-and-grid motif, Birthday Sprinkles uses
+color-coded modular cards, Silver Noir becomes a high-contrast cinematic index,
+and Matcha Cappuccino uses warm botanical gradients and soft café-like panels.
+All four retain the same accessible headings, controls, content order, and
+compact-screen behavior.
+
+Status presentation is independently configurable with a switch in the same
+settings menu. When enabled, it displays live Uptime Kuma health, provisional
+catalog states, status-colored nodes and structural edges, the state legend,
+and source details. Birthday Sprinkles, Silver Noir, and Matcha Cappuccino use
+a clear status-colored lift across node cores, halos, atmosphere, and structural
+edges when enabled; Signal Garden retains its established rendering. To preserve
+the force map's responsiveness, persistent glow is limited to the five primary
+nodes while hover and selection retain their interactive glow. When disabled,
+the interface removes the status wording and returns those graph cues to each
+theme's neutral palette while preserving hierarchy, access/privacy marks,
+semantic associations, and network-activity lights. The preference is stored
+locally and restored before the interface renders to avoid a visible theme or
+status-mode flash.
 
 ## Local development
 

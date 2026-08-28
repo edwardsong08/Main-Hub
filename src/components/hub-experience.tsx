@@ -15,8 +15,10 @@ import {
 } from "react";
 import { HubSettings } from "@/components/hub-settings";
 import { useHubForce } from "@/hooks/use-hub-force";
+import { useHubTheme } from "@/hooks/use-hub-theme";
 import { useLiveHubStatus } from "@/hooks/use-live-hub-status";
 import { useNetworkActivityPreference } from "@/hooks/use-network-activity-preference";
+import { useStatusVisibilityPreference } from "@/hooks/use-status-visibility-preference";
 import {
   getChildren,
   getNodeMetaSummary,
@@ -36,6 +38,7 @@ import type {
   HubLiveNodeStatus,
   HubLiveStatusSnapshot,
 } from "@/lib/live-status";
+import type { HubStatusVisibility } from "@/lib/hub-status-visibility";
 import {
   createHubWorld,
   getWorldNodeId,
@@ -139,6 +142,12 @@ function statusClass(signal: HubNodeSignal) {
   return `status-${signal}`;
 }
 
+function getNodeDisplaySummary(node: HubNode, statusesVisible: boolean) {
+  return statusesVisible
+    ? getNodeMetaSummary(node)
+    : visibilityLabels[node.visibility];
+}
+
 function visibilityClass(visibility: (typeof hubNodes)[string]["visibility"]) {
   return `visibility-${visibility}`;
 }
@@ -153,11 +162,11 @@ function territoryClass(node: HubWorldNode) {
 }
 
 const atmosphereColors: Record<HubNodeSignal, string> = {
-  operational: "rgb(178 204 132)",
-  building: "rgb(129 190 182)",
-  active: "rgb(158 150 199)",
-  unknown: "rgb(151 159 149)",
-  attention: "rgb(210 133 126)",
+  operational: "var(--atmosphere-operational)",
+  building: "var(--atmosphere-building)",
+  active: "var(--atmosphere-active)",
+  unknown: "var(--atmosphere-unknown)",
+  attention: "var(--atmosphere-attention)",
 };
 
 const atmosphereBlurProfiles = [
@@ -475,6 +484,7 @@ function ModeToggle({
 function WorldNode({
   node,
   displayData,
+  statusesVisible,
   viewportProfile,
   presence,
   isSelected,
@@ -486,6 +496,7 @@ function WorldNode({
 }: {
   node: HubWorldNode;
   displayData: HubNode;
+  statusesVisible: boolean;
   viewportProfile: MapViewportProfile;
   presence: NodePresence;
   isSelected: boolean;
@@ -553,7 +564,7 @@ function WorldNode({
       tabIndex={active ? 0 : undefined}
       aria-label={
         active
-          ? `${displayData.label}, ${getNodeMetaSummary(displayData)}${
+          ? `${displayData.label}, ${getNodeDisplaySummary(displayData, statusesVisible)}${
               isCluster ? ", enter zone" : ""
             }`
           : undefined
@@ -611,11 +622,13 @@ function WorldNode({
 function WorldAtmosphere({
   node,
   signal,
+  statusesVisible,
   viewportProfile,
   isVisible,
 }: {
   node: HubWorldNode;
   signal: HubNodeSignal;
+  statusesVisible: boolean;
   viewportProfile: MapViewportProfile;
   isVisible: boolean;
 }) {
@@ -645,7 +658,7 @@ function WorldAtmosphere({
           rx={renderCoordinate(radius * 0.68)}
           ry={renderCoordinate(radius * 0.52)}
           transform={`rotate(${renderCoordinate(angle - 18)})`}
-          fill="rgb(226 230 218)"
+          fill="var(--atmosphere-haze)"
           filter={`url(#world-atmosphere-haze-${node.depth})`}
         />
         <ellipse
@@ -653,7 +666,11 @@ function WorldAtmosphere({
           rx={renderCoordinate(radius * 0.56)}
           ry={renderCoordinate(radius * 0.4)}
           transform={`rotate(${angle})`}
-          fill={atmosphereColors[signal]}
+          fill={
+            statusesVisible
+              ? atmosphereColors[signal]
+              : "var(--atmosphere-neutral)"
+          }
           filter={`url(#world-atmosphere-bloom-${node.depth})`}
         />
       </g>
@@ -665,11 +682,13 @@ function MapView({
   focusId,
   liveStatusSnapshot,
   networkActivityEnabled,
+  statusVisibility,
   onFocusChange,
 }: {
   focusId: string;
   liveStatusSnapshot: HubLiveStatusSnapshot | null;
   networkActivityEnabled: boolean;
+  statusVisibility: HubStatusVisibility;
   onFocusChange: (id: string) => void;
 }) {
   const [world] = useState(createHubWorld);
@@ -700,6 +719,7 @@ function MapView({
   const { setPointer, settleNode } = useHubForce(world, Boolean(reducedMotion));
   const liveNodes = liveStatusSnapshot?.nodes ?? EMPTY_LIVE_NODES;
   const displayNodes = useMemo(() => buildDisplayNodes(liveNodes), [liveNodes]);
+  const statusesVisible = statusVisibility === "show";
 
   useEffect(() => {
     focusIdRef.current = focusId;
@@ -1110,6 +1130,7 @@ function MapView({
       className="map-view"
       data-viewport-profile={viewportProfile}
       data-has-selection={Boolean(selectedNode)}
+      data-status-visibility={statusVisibility}
       aria-label="Living systems map"
     >
       <h1 id="map-title" className="sr-only">ES/HUB living systems map</h1>
@@ -1140,15 +1161,25 @@ function MapView({
 
         <div className="map-coordinate" aria-hidden="true">
           depth {String(visibleDepth).padStart(2, "0")} — {world.nodes.length} signals
-          {liveStatusSnapshot?.available
-            ? ` · ${Object.keys(liveNodes).length} live`
-            : " · status pending"}
+          {statusesVisible ? (
+            <span className="status-sensitive">
+              {liveStatusSnapshot?.available
+                ? ` · ${Object.keys(liveNodes).length} live`
+                : " · status pending"}
+            </span>
+          ) : null}
         </div>
-        <p className="sr-only" aria-live="polite">
-          {liveStatusSnapshot?.available
-            ? `${Object.keys(liveNodes).length} node statuses connected from Uptime Kuma.`
-            : "Live service status is temporarily unavailable; catalog states are shown."}
-        </p>
+        {statusesVisible ? (
+          <p className="sr-only status-sensitive" aria-live="polite">
+            {liveStatusSnapshot?.available
+              ? `${Object.keys(liveNodes).length} node statuses connected from Uptime Kuma.`
+              : "Live service status is temporarily unavailable; catalog states are shown."}
+          </p>
+        ) : (
+          <p className="sr-only" aria-live="polite">
+            Status signals are hidden by display preference.
+          </p>
+        )}
 
         <motion.svg
           ref={svgRef}
@@ -1184,6 +1215,7 @@ function MapView({
                     key={node.id}
                     node={node}
                     signal={getNodeSignal(displayNodes[node.id])}
+                    statusesVisible={statusesVisible}
                     viewportProfile={viewportProfile}
                     isVisible={contextNodeId === node.id}
                   />
@@ -1270,6 +1302,16 @@ function MapView({
                             dur={`${flowProfile.duration}s`}
                             repeatCount="indefinite"
                           />
+                          <animate
+                            attributeName="fill-opacity"
+                            values=".82;1;.82"
+                            keyTimes="0;.58;1"
+                            calcMode="spline"
+                            keySplines=".4 0 .6 1;.4 0 .6 1"
+                            begin={`${flowProfile.begin}s`}
+                            dur={`${flowProfile.duration}s`}
+                            repeatCount="indefinite"
+                          />
                         </circle>
                       );
                     })}
@@ -1337,6 +1379,7 @@ function MapView({
                     key={node.id}
                     node={node}
                     displayData={displayNodes[node.id]}
+                    statusesVisible={statusesVisible}
                     viewportProfile={viewportProfile}
                     presence={presence}
                     isSelected={selectedId === node.id}
@@ -1371,17 +1414,19 @@ function MapView({
         </div>
 
         <div className="map-legend" aria-label="Map visual key">
-          <div className="map-legend-group">
-            <strong>State</strong>
-            {(["operational", "active", "building", "unknown"] as const).map(
-              (signal) => (
-                <span key={signal}>
-                  <i className={statusClass(signal)} />
-                  {signalLabels[signal]}
-                </span>
-              ),
-            )}
-          </div>
+          {statusesVisible ? (
+            <div className="map-legend-group status-sensitive">
+              <strong>State</strong>
+              {(["operational", "active", "building", "unknown"] as const).map(
+                (signal) => (
+                  <span key={signal}>
+                    <i className={statusClass(signal)} />
+                    {signalLabels[signal]}
+                  </span>
+                ),
+              )}
+            </div>
+          ) : null}
           <div className="map-legend-group">
             <strong>Access</strong>
             {(["abstracted", "private"] as const).map((visibility) => (
@@ -1421,26 +1466,32 @@ function MapView({
               <p className="drawer-eyebrow">{selectedNode.eyebrow}</p>
               <h2 id={`drawer-title-${selectedNode.id}`}>{selectedNode.label}</h2>
               <p>{selectedNode.description}</p>
-              {selectedLiveStatus ? (
-                <div className="drawer-live-source">
-                  <span>Live via {selectedLiveStatus.sourceLabel}</span>
-                  {selectedLiveStatus.uptime24h !== null ? (
-                    <span>
-                      {(selectedLiveStatus.uptime24h * 100).toFixed(2)}% / 24h
-                    </span>
-                  ) : null}
-                </div>
-              ) : selectedNode.statusSource === "manual" ? (
-                <div className="drawer-live-source drawer-manual-source">
-                  <span>Manual status</span>
-                  <span>Kuma pending</span>
-                </div>
+              {statusesVisible ? (
+                selectedLiveStatus ? (
+                  <div className="drawer-live-source status-sensitive">
+                    <span>Live via {selectedLiveStatus.sourceLabel}</span>
+                    {selectedLiveStatus.uptime24h !== null ? (
+                      <span>
+                        {(selectedLiveStatus.uptime24h * 100).toFixed(2)}% / 24h
+                      </span>
+                    ) : null}
+                  </div>
+                ) : selectedNode.statusSource === "manual" ? (
+                  <div className="drawer-live-source drawer-manual-source status-sensitive">
+                    <span>Manual status</span>
+                    <span>Kuma pending</span>
+                  </div>
+                ) : null
               ) : null}
               <div className="drawer-footer">
                 <div className="drawer-signals">
-                  <span className={statusClass(getNodeSignal(selectedNode))}>
-                    {getNodePrimaryStateLabel(selectedNode)}
-                  </span>
+                  {statusesVisible ? (
+                    <span
+                      className={`${statusClass(getNodeSignal(selectedNode))} status-sensitive`}
+                    >
+                      {getNodePrimaryStateLabel(selectedNode)}
+                    </span>
+                  ) : null}
                   <span className={visibilityClass(selectedNode.visibility)}>
                     {visibilityLabels[selectedNode.visibility]}
                   </span>
@@ -1463,17 +1514,20 @@ function MapView({
 
 function IndexView({
   liveStatusSnapshot,
+  statusVisibility,
   onEnterZone,
 }: {
   liveStatusSnapshot: HubLiveStatusSnapshot | null;
+  statusVisibility: HubStatusVisibility;
   onEnterZone: (id: string) => void;
 }) {
   const zones = getChildren(rootNodeId);
   const liveNodes = liveStatusSnapshot?.nodes ?? EMPTY_LIVE_NODES;
   const displayNodes = useMemo(() => buildDisplayNodes(liveNodes), [liveNodes]);
+  const statusesVisible = statusVisibility === "show";
 
   return (
-    <main className="index-view">
+    <main className="index-view" data-status-visibility={statusVisibility}>
       <header className="index-intro">
         <p>Edward Song / Main Hub</p>
         <h1>A quiet index of interconnected work.</h1>
@@ -1502,11 +1556,13 @@ function IndexView({
                   return (
                     <li key={child.id}>
                       <span className="index-signals" aria-hidden="true">
-                        <i
-                          className={`index-status ${statusClass(
-                            getNodeSignal(displayChild),
-                          )}`}
-                        />
+                        {statusesVisible ? (
+                          <i
+                            className={`index-status status-sensitive ${statusClass(
+                              getNodeSignal(displayChild),
+                            )}`}
+                          />
+                        ) : null}
                         {displayChild.visibility !== "public" ? (
                           <i
                             className={`index-access ${visibilityClass(
@@ -1516,7 +1572,9 @@ function IndexView({
                         ) : null}
                       </span>
                       <span>{displayChild.label}</span>
-                      <small>{getNodeMetaSummary(displayChild)}</small>
+                      <small>
+                        {getNodeDisplaySummary(displayChild, statusesVisible)}
+                      </small>
                     </li>
                   );
                 })}
@@ -1529,9 +1587,11 @@ function IndexView({
       <footer className="index-footer">
         <span>ES/HUB — Local prototype</span>
         <span>
-          {liveStatusSnapshot?.available
-            ? `${Object.keys(liveNodes).length} live via Uptime Kuma`
-            : "Public-safe topology · 2026"}
+          {statusesVisible
+            ? liveStatusSnapshot?.available
+              ? `${Object.keys(liveNodes).length} live via Uptime Kuma`
+              : "Public-safe topology · 2026"
+            : "Status display hidden"}
         </span>
       </footer>
     </main>
@@ -1543,6 +1603,9 @@ export function HubExperience() {
   const [focusId, setFocusId] = useState(rootNodeId);
   const [networkActivityEnabled, setNetworkActivityEnabled] =
     useNetworkActivityPreference();
+  const [statusVisibility, setStatusVisibility] =
+    useStatusVisibilityPreference();
+  const [theme, setTheme] = useHubTheme();
   const liveStatusSnapshot = useLiveHubStatus();
 
   useEffect(() => {
@@ -1561,7 +1624,11 @@ export function HubExperience() {
   }
 
   return (
-    <div className={`hub-shell mode-${mode}`}>
+    <div
+      className={`hub-shell mode-${mode}`}
+      data-theme={theme}
+      data-status-visibility={statusVisibility}
+    >
       <header className="hub-header">
         <button
           type="button"
@@ -1580,7 +1647,11 @@ export function HubExperience() {
           <ModeToggle mode={mode} onChange={setMode} />
           <HubSettings
             networkActivityEnabled={networkActivityEnabled}
+            statusVisibility={statusVisibility}
+            theme={theme}
             onNetworkActivityChange={setNetworkActivityEnabled}
+            onStatusVisibilityChange={setStatusVisibility}
+            onThemeChange={setTheme}
           />
         </div>
       </header>
@@ -1590,11 +1661,13 @@ export function HubExperience() {
           focusId={focusId}
           liveStatusSnapshot={liveStatusSnapshot}
           networkActivityEnabled={networkActivityEnabled}
+          statusVisibility={statusVisibility}
           onFocusChange={setFocusId}
         />
       ) : (
         <IndexView
           liveStatusSnapshot={liveStatusSnapshot}
+          statusVisibility={statusVisibility}
           onEnterZone={enterZone}
         />
       )}

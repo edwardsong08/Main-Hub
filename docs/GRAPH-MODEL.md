@@ -69,6 +69,7 @@ software categories.
 - Projects & Lab
   - Active Projects
     - Main Hub
+    - 4ME OS
     - ClaimChain
   - Portfolio Projects
     - OpenBid

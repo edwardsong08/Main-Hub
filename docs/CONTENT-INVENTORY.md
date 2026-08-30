@@ -38,10 +38,11 @@ Initial monitored services:
 - Each currently live public project
 - Any public tool whose availability matters to visitors
 
-Current personal project monitors include ClaimChain and OpenBid. The published
-checks use their maintained live Vercel endpoints; their primary delivery
-platforms are AWS and Render respectively. Platform ownership and endpoint
-follow-up are documented in `PROJECT-STATUS.md`.
+Current personal project monitors include Main Hub, 4ME OS, ClaimChain, and
+OpenBid. Main Hub observes its public landing page, 4ME OS uses its public
+liveness endpoint, and ClaimChain and OpenBid use maintained live Vercel
+endpoints; their primary delivery platforms are AWS and Render respectively.
+Platform ownership and endpoint follow-up are documented in `PROJECT-STATUS.md`.
 
 TROA software is organized as `Software & Data` with Public Apps, Internal
 Tools, Community Platforms, Data Services, and Integrations beneath it. Exact
@@ -107,6 +108,7 @@ Initial editorial tasks:
 Current graph inventory:
 
 - Main Hub: Living Map, Status Integration, and Content Index
+- 4ME OS: Context Foundation, Owner Workspace, and Runtime & Recovery
 - ClaimChain: Governed Workflows, Payments & Reconciliation, Document Export,
   and planned Advisory ML
 - OpenBid (`realestatebidding` repository): Product Experience,

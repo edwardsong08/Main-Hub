@@ -53,6 +53,8 @@ The current monitor-to-node mapping is intentionally explicit:
 | Personal Site | `profile` |
 | Penpot | `penpot` |
 | Jellyfin | `jellyfin` |
+| 4ME OS | `fourme` |
+| Main Hub | `main-hub-project` |
 | ClaimChain | `claimchain` |
 | OpenBid | `openbid` |
 
@@ -86,7 +88,8 @@ TROA's broader public status page supplies software and platform health:
 The complete Coolify inventory cross-check, provisional-monitor list, and
 status-source caveats are maintained in
 [docs/TROA-SOFTWARE-STATUS.md](docs/TROA-SOFTWARE-STATUS.md).
-Project deployment and monitor ownership are recorded in
+Project deployment and monitor ownership, including the Main Hub landing check
+and public 4ME OS liveness endpoint, are recorded in
 [docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md), while Ryu Legal's planned
 service coverage is tracked in [docs/RYU-STATUS.md](docs/RYU-STATUS.md).
 

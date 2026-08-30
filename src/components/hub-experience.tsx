@@ -1537,6 +1537,8 @@ function IndexView({
       <div className="index-grid">
         {zones.map((zone, index) => {
           const zoneChildren = getChildren(zone.id);
+          const indexedProjects =
+            zone.id === "projects" ? getChildren("active-projects") : [];
           return (
             <article className="index-zone" key={zone.id}>
               <div className="zone-number">0{index + 1}</div>
@@ -1579,6 +1581,55 @@ function IndexView({
                   );
                 })}
               </ul>
+              {indexedProjects.length > 0 ? (
+                <section
+                  className="index-projects"
+                  aria-label="Active project index"
+                >
+                  <p>Active project index</p>
+                  <ul>
+                    {indexedProjects.map((project) => {
+                      const displayProject = displayNodes[project.id];
+                      return (
+                        <li key={project.id}>
+                          <span className="index-signals" aria-hidden="true">
+                            {statusesVisible ? (
+                              <i
+                                className={`index-status status-sensitive ${statusClass(
+                                  getNodeSignal(displayProject),
+                                )}`}
+                              />
+                            ) : null}
+                            {displayProject.visibility !== "public" ? (
+                              <i
+                                className={`index-access ${visibilityClass(
+                                  displayProject.visibility,
+                                )}`}
+                              />
+                            ) : null}
+                          </span>
+                          <span className="index-project-copy">
+                            {displayProject.href ? (
+                              <a href={displayProject.href}>
+                                {displayProject.label}
+                              </a>
+                            ) : (
+                              <strong>{displayProject.label}</strong>
+                            )}
+                            <span>{displayProject.description}</span>
+                          </span>
+                          <small>
+                            {getNodeDisplaySummary(
+                              displayProject,
+                              statusesVisible,
+                            )}
+                          </small>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              ) : null}
             </article>
           );
         })}

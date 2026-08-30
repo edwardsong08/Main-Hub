@@ -8,11 +8,17 @@ not itself an uptime signal.
 
 | Project | Hub ID | Kuma monitor | Monitor ID | Checked endpoint | Primary platform |
 | --- | --- | --- | ---: | --- | --- |
+| Main Hub | `main-hub-project` | Main Hub | 8 | `https://hub.edsong.xyz/` | Coolify |
+| 4ME OS | `fourme` | 4ME OS | 7 | `https://4me.edsong.xyz/api/health` | Coolify |
 | ClaimChain | `claimchain` | ClaimChain | 5 | `https://claimchain-tan.vercel.app` | AWS |
 | OpenBid | `openbid` | OpenBid | 6 | `https://realestatebidding.vercel.app` | Render |
 
-Both Vercel endpoints are intentionally maintained live deployments. They are
-published on the personal Kuma page at `/status/hub` and are normalized by
+The Main Hub check observes the public landing page and living map. The 4ME OS
+check targets its dedicated process-liveness endpoint so public availability
+remains distinct from the stricter `/api/ready` dependency and owner-enrollment
+gate. The ClaimChain and OpenBid Vercel endpoints are intentionally maintained
+live deployments. All four checks are published on the personal Kuma page at
+`/status/hub` and are normalized by
 `src/app/api/status/route.ts`.
 
 ## Deployment relationships
@@ -22,6 +28,7 @@ published on the personal Kuma page at `/status/hub` and are normalized by
 - Profile Site: Vercel is primary.
 - Ryu Legal Website: Vercel is primary.
 - Main Hub: Coolify is primary.
+- 4ME OS: Coolify is primary; its PostgreSQL resource remains private.
 
 ## Follow-up
 
@@ -29,5 +36,3 @@ published on the personal Kuma page at `/status/hub` and are normalized by
   public URLs are recorded here.
 - Decide whether project health should aggregate multiple deployments or
   continue to represent one selected public endpoint.
-- Add a Main Hub monitor separate from the existing `Home Lab Services` group
-  if the project node should expose its own exact live observation.

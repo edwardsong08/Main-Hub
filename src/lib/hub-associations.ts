@@ -55,7 +55,15 @@ function association(
  */
 export const hubAssociations: readonly HubAssociation[] = [
   association("coolify", "main-hub-project", "deploys", "deploys", true),
-  association("uptime-kuma", "main-hub-project", "monitors", "monitors"),
+  association("coolify", "fourme", "deploys", "deploys", true),
+  association(
+    "uptime-kuma",
+    "main-hub-project",
+    "monitors",
+    "monitors",
+    false,
+    "source-to-target",
+  ),
   association(
     "uptime-kuma",
     "profile",
@@ -82,6 +90,14 @@ export const hubAssociations: readonly HubAssociation[] = [
   ),
   association(
     "uptime-kuma",
+    "fourme",
+    "monitors",
+    "monitors",
+    false,
+    "source-to-target",
+  ),
+  association(
+    "uptime-kuma",
     "claimchain",
     "monitors",
     "monitors",
@@ -99,6 +115,14 @@ export const hubAssociations: readonly HubAssociation[] = [
   association(
     "cloudflare",
     "main-hub-project",
+    "routes",
+    "routes",
+    false,
+    "source-to-target",
+  ),
+  association(
+    "cloudflare",
+    "fourme",
     "routes",
     "routes",
     false,

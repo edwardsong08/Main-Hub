@@ -1090,7 +1090,7 @@ export const hubNodes: Record<string, HubNode> = {
     eyebrow: "Projects & Lab",
     description: "Current products and substantial ongoing builds.",
     kind: "group",
-    children: ["main-hub-project", "claimchain"],
+    children: ["main-hub-project", "fourme", "claimchain"],
   }),
   "main-hub-project": defineNode({
     id: "main-hub-project",
@@ -1125,6 +1125,52 @@ export const hubNodes: Record<string, HubNode> = {
     description: "The developing index for projects, writing, tools, and useful links.",
     kind: "content",
     lifecycle: "building",
+  }),
+  fourme: defineNode({
+    id: "fourme",
+    label: "4ME OS",
+    shortLabel: "4ME",
+    eyebrow: "Active Projects",
+    description:
+      "A self-hosted coordination system for durable personal, project, work, and agent context.",
+    kind: "group",
+    lifecycle: "building",
+    children: [
+      "fourme-context-foundation",
+      "fourme-owner-workspace",
+      "fourme-runtime-recovery",
+    ],
+    href: "https://4me.edsong.xyz",
+  }),
+  "fourme-context-foundation": defineNode({
+    id: "fourme-context-foundation",
+    label: "Context Foundation",
+    eyebrow: "4ME OS",
+    description:
+      "The governed foundation for provenance-backed context, evidence, roles, and instructions.",
+    kind: "abstraction",
+    lifecycle: "building",
+    visibility: "abstracted",
+  }),
+  "fourme-owner-workspace": defineNode({
+    id: "fourme-owner-workspace",
+    label: "Owner Workspace",
+    eyebrow: "4ME OS",
+    description:
+      "A private authenticated control center for system health, sessions, and operational readiness.",
+    kind: "project",
+    lifecycle: "building",
+    visibility: "private",
+  }),
+  "fourme-runtime-recovery": defineNode({
+    id: "fourme-runtime-recovery",
+    label: "Runtime & Recovery",
+    eyebrow: "4ME OS",
+    description:
+      "Web, worker, database, artifact-storage, and guarded backup and restore foundations.",
+    kind: "abstraction",
+    lifecycle: "building",
+    visibility: "abstracted",
   }),
   claimchain: defineNode({
     id: "claimchain",

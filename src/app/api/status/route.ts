@@ -25,6 +25,8 @@ const personalMonitorMapping: KumaMonitorMapping = {
     4: "jellyfin",
     5: "claimchain",
     6: "openbid",
+    7: "fourme",
+    8: "main-hub-project",
   },
   names: {
     "home lab services": "homelab-services",
@@ -33,6 +35,8 @@ const personalMonitorMapping: KumaMonitorMapping = {
     jellyfin: "jellyfin",
     claimchain: "claimchain",
     openbid: "openbid",
+    "4me os": "fourme",
+    "main hub": "main-hub-project",
   },
 };
 

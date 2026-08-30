@@ -1426,6 +1426,47 @@ button { font: inherit; }
 .index-status {
   align-self: center;
 }
+.index-projects {
+  margin-top: 25px;
+}
+.index-projects > p {
+  margin: 0 0 8px;
+  color: rgba(16, 18, 15, .42);
+  font-family: "Courier New", monospace;
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+.index-project-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.index-project-copy a,
+.index-project-copy strong {
+  width: fit-content;
+  color: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.index-project-copy a {
+  text-decoration-line: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: color 180ms ease, text-decoration-color 180ms ease;
+}
+.index-project-copy a:hover,
+.index-project-copy a:focus-visible {
+  color: #557f00;
+  text-decoration-color: currentColor;
+}
+.index-project-copy > span {
+  color: rgba(16, 18, 15, .48);
+  font-size: 9px;
+  line-height: 1.45;
+}
 .index-footer {
   display: flex;
   justify-content: space-between;
@@ -1803,6 +1844,16 @@ html[data-theme] .zone-description { color: rgb(var(--ink-rgb) / .58); }
 html[data-theme] .index-zone li {
   border-color: rgb(var(--index-rule-rgb) / .12);
   color: rgb(var(--ink-rgb) / .72);
+}
+html[data-theme] .index-projects > p {
+  color: rgb(var(--ink-rgb) / .42);
+}
+html[data-theme] .index-project-copy > span {
+  color: rgb(var(--ink-rgb) / .48);
+}
+html[data-theme] .index-project-copy a:hover,
+html[data-theme] .index-project-copy a:focus-visible {
+  color: var(--index-accent);
 }
 html[data-theme] .index-access.visibility-abstracted {
   border-color: rgb(var(--ink-rgb) / .52);

@@ -56,6 +56,8 @@ function association(
 export const hubAssociations: readonly HubAssociation[] = [
   association("coolify", "main-hub-project", "deploys", "deploys", true),
   association("coolify", "fourme", "deploys", "deploys", true),
+  association("coolify", "documenso", "deploys", "deploys", true),
+  association("coolify", "jellyfin", "deploys", "deploys", true),
   association(
     "uptime-kuma",
     "main-hub-project",
@@ -83,6 +85,14 @@ export const hubAssociations: readonly HubAssociation[] = [
   association(
     "uptime-kuma",
     "jellyfin",
+    "monitors",
+    "monitors",
+    false,
+    "source-to-target",
+  ),
+  association(
+    "uptime-kuma",
+    "documenso",
     "monitors",
     "monitors",
     false,
@@ -123,6 +133,22 @@ export const hubAssociations: readonly HubAssociation[] = [
   association(
     "cloudflare",
     "fourme",
+    "routes",
+    "routes",
+    false,
+    "source-to-target",
+  ),
+  association(
+    "cloudflare",
+    "documenso",
+    "routes",
+    "routes",
+    false,
+    "source-to-target",
+  ),
+  association(
+    "cloudflare",
+    "jellyfin",
     "routes",
     "routes",
     false,
@@ -258,12 +284,10 @@ export const hubAssociations: readonly HubAssociation[] = [
 
   association("ryu-workflows", "ryu-software", "drives", "drives", true),
   association("ryu-documents", "ryu-workflows", "supports", "supports"),
-  association("ryu-documenso", "ryu-workflows", "supports", "supports"),
-  association("ryu-application-server", "ryu-documenso", "hosts", "hosts"),
+  association("documenso", "ryu-agreements", "implements", "implements"),
   association("ryu-database", "ryu-software", "stores", "stores"),
   association("ryu-database", "ryu-workflows", "supports", "supports"),
   association("ryu-server-backups", "ryu-database", "protects", "protects"),
-  association("ryu-server-backups", "ryu-documenso", "protects", "protects"),
   association(
     "ryu-edge-dns",
     "ryu-site",
@@ -273,7 +297,6 @@ export const hubAssociations: readonly HubAssociation[] = [
     "source-to-target",
   ),
   association("ryu-monitoring", "ryu-site", "monitors", "monitors"),
-  association("ryu-monitoring", "ryu-documenso", "monitors", "monitors"),
   association("ryu-infrastructure", "ryu-site", "supports", "supports", true),
   association(
     "ryu-infrastructure",
@@ -294,6 +317,7 @@ export const hubAssociations: readonly HubAssociation[] = [
   association("penpot", "ryu-site", "designs", "designs"),
   association("penpot", "design-studies", "designs", "designs"),
   association("penpot", "hub-living-map", "designs", "designs"),
+  association("personal-storage", "jellyfin", "stores", "stores media for"),
   association(
     "uptime-kuma",
     "hub-status-integration",

@@ -1537,8 +1537,20 @@ function IndexView({
       <div className="index-grid">
         {zones.map((zone, index) => {
           const zoneChildren = getChildren(zone.id);
-          const indexedProjects =
-            zone.id === "projects" ? getChildren("active-projects") : [];
+          const indexedSection =
+            zone.id === "projects"
+              ? {
+                  label: "Active project index",
+                  nodes: getChildren("active-projects"),
+                }
+              : zone.id === "homelab"
+                ? {
+                    label: "Self-hosted service index",
+                    nodes: getChildren("homelab-services").filter(
+                      (node) => node.kind === "service",
+                    ),
+                  }
+                : null;
           return (
             <article className="index-zone" key={zone.id}>
               <div className="zone-number">0{index + 1}</div>
@@ -1581,46 +1593,46 @@ function IndexView({
                   );
                 })}
               </ul>
-              {indexedProjects.length > 0 ? (
+              {indexedSection ? (
                 <section
                   className="index-projects"
-                  aria-label="Active project index"
+                  aria-label={indexedSection.label}
                 >
-                  <p>Active project index</p>
+                  <p>{indexedSection.label}</p>
                   <ul>
-                    {indexedProjects.map((project) => {
-                      const displayProject = displayNodes[project.id];
+                    {indexedSection.nodes.map((indexedNode) => {
+                      const displayNode = displayNodes[indexedNode.id];
                       return (
-                        <li key={project.id}>
+                        <li key={indexedNode.id}>
                           <span className="index-signals" aria-hidden="true">
                             {statusesVisible ? (
                               <i
                                 className={`index-status status-sensitive ${statusClass(
-                                  getNodeSignal(displayProject),
+                                  getNodeSignal(displayNode),
                                 )}`}
                               />
                             ) : null}
-                            {displayProject.visibility !== "public" ? (
+                            {displayNode.visibility !== "public" ? (
                               <i
                                 className={`index-access ${visibilityClass(
-                                  displayProject.visibility,
+                                  displayNode.visibility,
                                 )}`}
                               />
                             ) : null}
                           </span>
                           <span className="index-project-copy">
-                            {displayProject.href ? (
-                              <a href={displayProject.href}>
-                                {displayProject.label}
+                            {displayNode.href ? (
+                              <a href={displayNode.href}>
+                                {displayNode.label}
                               </a>
                             ) : (
-                              <strong>{displayProject.label}</strong>
+                              <strong>{displayNode.label}</strong>
                             )}
-                            <span>{displayProject.description}</span>
+                            <span>{displayNode.description}</span>
                           </span>
                           <small>
                             {getNodeDisplaySummary(
-                              displayProject,
+                              displayNode,
                               statusesVisible,
                             )}
                           </small>

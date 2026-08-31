@@ -52,7 +52,7 @@ software categories.
   - Legal Operations
     - Matters & Workflows
     - Documents & Knowledge
-      - Documenso
+      - Agreement Workflows
   - Technology Platform
     - Software & Integrations
     - Data & Records
@@ -66,6 +66,10 @@ software categories.
   - Systems
   - Platform
   - Services
+    - Penpot
+    - Documenso
+    - Jellyfin
+    - Self-hosted Software
 - Projects & Lab
   - Active Projects
     - Main Hub

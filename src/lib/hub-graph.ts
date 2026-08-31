@@ -752,17 +752,17 @@ export const hubNodes: Record<string, HubNode> = {
     kind: "group",
     lifecycle: "building",
     visibility: "private",
-    children: ["ryu-documenso"],
+    children: ["ryu-agreements"],
   }),
-  "ryu-documenso": defineNode({
-    id: "ryu-documenso",
-    label: "Documenso",
+  "ryu-agreements": defineNode({
+    id: "ryu-agreements",
+    label: "Agreement Workflows",
+    shortLabel: "Agreements",
     eyebrow: "Documents & Knowledge",
-    description: "A planned self-managed document signing and agreement workflow.",
-    kind: "service",
-    lifecycle: "planned",
+    description: "Private signing, approval, and agreement lifecycle practices.",
+    kind: "abstraction",
+    lifecycle: "building",
     visibility: "private",
-    health: "unknown",
   }),
   "ryu-technology": defineNode({
     id: "ryu-technology",
@@ -995,7 +995,8 @@ export const hubNodes: Record<string, HubNode> = {
     id: "personal-storage",
     label: "Storage & Backup",
     eyebrow: "Systems",
-    description: "Private storage, replication, and recovery practices.",
+    description:
+      "Private storage, replication, recovery, and dedicated media capacity.",
     kind: "abstraction",
     visibility: "private",
   }),
@@ -1040,7 +1041,7 @@ export const hubNodes: Record<string, HubNode> = {
     description: "Useful self-hosted applications and personal tools.",
     kind: "group",
     visibility: "abstracted",
-    children: ["penpot", "jellyfin", "self-hosted-software"],
+    children: ["penpot", "documenso", "jellyfin", "self-hosted-software"],
   }),
   penpot: defineNode({
     id: "penpot",
@@ -1050,11 +1051,22 @@ export const hubNodes: Record<string, HubNode> = {
     kind: "service",
     health: "unknown",
   }),
+  documenso: defineNode({
+    id: "documenso",
+    label: "Documenso",
+    eyebrow: "Services",
+    description:
+      "Private document signing and agreement workflows, self-hosted through the Homelab.",
+    kind: "service",
+    visibility: "private",
+    health: "unknown",
+  }),
   jellyfin: defineNode({
     id: "jellyfin",
     label: "Jellyfin",
     eyebrow: "Services",
-    description: "Private media library and streaming.",
+    description:
+      "Private media library and streaming backed by dedicated media storage.",
     kind: "service",
     visibility: "private",
     health: "unknown",

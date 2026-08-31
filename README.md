@@ -47,16 +47,17 @@ TROA_PLATFORM_UPTIME_KUMA_STATUS_SLUG=live
 
 The current monitor-to-node mapping is intentionally explicit:
 
-| Uptime Kuma monitor | Hub node |
-| --- | --- |
-| Home Lab Services | `homelab-services` |
-| Personal Site | `profile` |
-| Penpot | `penpot` |
-| Jellyfin | `jellyfin` |
-| 4ME OS | `fourme` |
-| Main Hub | `main-hub-project` |
-| ClaimChain | `claimchain` |
-| OpenBid | `openbid` |
+| Uptime Kuma monitor | Monitor ID | Hub node |
+| --- | ---: | --- |
+| Home Lab Services | 1 | `homelab-services` |
+| Personal Site | 2 | `profile` |
+| Penpot | 3 | `penpot` |
+| Jellyfin | 4 | `jellyfin` |
+| ClaimChain | 5 | `claimchain` |
+| OpenBid | 6 | `openbid` |
+| 4ME OS | 7 | `fourme` |
+| Main Hub | 8 | `main-hub-project` |
+| Documenso | 9 | `documenso` |
 
 TROA's public game-server page is mapped separately so its monitor IDs cannot
 collide with the personal Kuma instance:
@@ -90,8 +91,10 @@ status-source caveats are maintained in
 [docs/TROA-SOFTWARE-STATUS.md](docs/TROA-SOFTWARE-STATUS.md).
 Project deployment and monitor ownership, including the Main Hub landing check
 and public 4ME OS liveness endpoint, are recorded in
-[docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md), while Ryu Legal's planned
-service coverage is tracked in [docs/RYU-STATUS.md](docs/RYU-STATUS.md).
+[docs/PROJECT-STATUS.md](docs/PROJECT-STATUS.md), while Ryu Legal's service
+coverage is tracked in [docs/RYU-STATUS.md](docs/RYU-STATUS.md).
+The recurring Coolify, graph, index, Kuma, and production reconciliation is
+defined in [docs/HUB-UPDATE-RUNBOOK.md](docs/HUB-UPDATE-RUNBOOK.md).
 
 Within the map, TROA's game services use a fourth hierarchy level where it adds
 meaning: `Game Worlds` opens into game families such as `Space Engineers` and

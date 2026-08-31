@@ -34,14 +34,17 @@ Initial monitored services:
 - Main Hub (`hub.edsong.xyz`)
 - Profile site
 - Penpot
+- Documenso
 - Jellyfin
 - Each currently live public project
 - Any public tool whose availability matters to visitors
 
-Current personal project monitors include Main Hub, 4ME OS, ClaimChain, and
-OpenBid. Main Hub observes its public landing page, 4ME OS uses its public
-liveness endpoint, and ClaimChain and OpenBid use maintained live Vercel
-endpoints; their primary delivery platforms are AWS and Render respectively.
+Current personal coverage includes the Profile Site, Main Hub, 4ME OS,
+Documenso, Penpot, Jellyfin, ClaimChain, and OpenBid. Main Hub observes its
+public landing page, 4ME OS uses its public liveness endpoint, and Documenso
+observes its public sign-in surface. ClaimChain and OpenBid use maintained live
+Vercel endpoints; their primary delivery platforms are AWS and Render
+respectively.
 Platform ownership and endpoint follow-up are documented in `PROJECT-STATUS.md`.
 
 TROA software is organized as `Software & Data` with Public Apps, Internal

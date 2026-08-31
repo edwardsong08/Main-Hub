@@ -27,6 +27,7 @@ const personalMonitorMapping: KumaMonitorMapping = {
     6: "openbid",
     7: "fourme",
     8: "main-hub-project",
+    9: "documenso",
   },
   names: {
     "home lab services": "homelab-services",
@@ -37,6 +38,7 @@ const personalMonitorMapping: KumaMonitorMapping = {
     openbid: "openbid",
     "4me os": "fourme",
     "main hub": "main-hub-project",
+    documenso: "documenso",
   },
 };
 

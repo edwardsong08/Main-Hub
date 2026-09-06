@@ -68,6 +68,7 @@ software categories.
   - Services
     - Penpot
     - Documenso
+    - Stirling PDF
     - Jellyfin
     - Self-hosted Software
 - Projects & Lab
@@ -125,6 +126,15 @@ relationships remain static unless they represent a real declared traffic path.
 For example, the TROA-to-Ryu shared-practice and support edges do not carry
 lights. These are topology cues rather than measured packet telemetry, and
 reduced-motion preferences always suppress them.
+
+## Index projection
+
+The Index is generated from the same `children` arrays as the Map and renders
+the complete hierarchy in the same order, from the Main Hub origin through
+every destination. It is not a curated or flattened duplicate. Dotted semantic
+associations remain outside the hierarchy and are listed once in the separate
+Connections disclosure, including a network-path marker where `networkFlow` is
+declared.
 
 ## Spatial model
 

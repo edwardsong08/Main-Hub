@@ -19,6 +19,7 @@ import { useHubTheme } from "@/hooks/use-hub-theme";
 import { useLiveHubStatus } from "@/hooks/use-live-hub-status";
 import { useNetworkActivityPreference } from "@/hooks/use-network-activity-preference";
 import { useStatusVisibilityPreference } from "@/hooks/use-status-visibility-preference";
+import { hubAssociations } from "@/lib/hub-associations";
 import {
   getChildren,
   getNodeMetaSummary,
@@ -1512,6 +1513,83 @@ function MapView({
   );
 }
 
+function IndexSignals({
+  node,
+  statusesVisible,
+}: {
+  node: HubNode;
+  statusesVisible: boolean;
+}) {
+  return (
+    <span className="index-signals" aria-hidden="true">
+      {statusesVisible ? (
+        <i
+          className={`index-status status-sensitive ${statusClass(
+            getNodeSignal(node),
+          )}`}
+        />
+      ) : null}
+      {node.visibility !== "public" ? (
+        <i className={`index-access ${visibilityClass(node.visibility)}`} />
+      ) : null}
+    </span>
+  );
+}
+
+function IndexTree({
+  nodeIds,
+  displayNodes,
+  statusesVisible,
+  depth = 1,
+}: {
+  nodeIds: string[];
+  displayNodes: Record<string, HubNode>;
+  statusesVisible: boolean;
+  depth?: number;
+}) {
+  return (
+    <ul className={depth === 1 ? "index-tree" : "index-tree index-tree-nested"}>
+      {nodeIds.map((nodeId) => {
+        const displayNode = displayNodes[nodeId];
+        const childIds = displayNode.children ?? [];
+
+        return (
+          <li
+            className={`index-tree-item index-depth-${depth} ${childIds.length > 0 ? "has-children" : "is-leaf"}`}
+            key={nodeId}
+          >
+            <div className="index-tree-row">
+              <IndexSignals
+                node={displayNode}
+                statusesVisible={statusesVisible}
+              />
+              <span className="index-tree-copy">
+                {displayNode.href ? (
+                  <a href={displayNode.href}>{displayNode.label}</a>
+                ) : (
+                  <strong>{displayNode.label}</strong>
+                )}
+                <span>{displayNode.description}</span>
+              </span>
+              <small>
+                {getNodeDisplaySummary(displayNode, statusesVisible)}
+              </small>
+            </div>
+            {childIds.length > 0 ? (
+              <IndexTree
+                nodeIds={childIds}
+                displayNodes={displayNodes}
+                statusesVisible={statusesVisible}
+                depth={depth + 1}
+              />
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 function IndexView({
   liveStatusSnapshot,
   statusVisibility,
@@ -1532,25 +1610,26 @@ function IndexView({
         <p>Edward Song / Main Hub</p>
         <h1>A quiet index of interconnected work.</h1>
         <span>Systems · software · writing · operations · experiments</span>
+        <div className="index-root-node">
+          <IndexSignals
+            node={displayNodes[rootNodeId]}
+            statusesVisible={statusesVisible}
+          />
+          <span>
+            <strong>{displayNodes[rootNodeId].label}</strong>
+            <span>{displayNodes[rootNodeId].description}</span>
+          </span>
+          <small>
+            {getNodeDisplaySummary(
+              displayNodes[rootNodeId],
+              statusesVisible,
+            )}
+          </small>
+        </div>
       </header>
 
       <div className="index-grid">
         {zones.map((zone, index) => {
-          const zoneChildren = getChildren(zone.id);
-          const indexedSection =
-            zone.id === "projects"
-              ? {
-                  label: "Active project index",
-                  nodes: getChildren("active-projects"),
-                }
-              : zone.id === "homelab"
-                ? {
-                    label: "Self-hosted service index",
-                    nodes: getChildren("homelab-services").filter(
-                      (node) => node.kind === "service",
-                    ),
-                  }
-                : null;
           return (
             <article className="index-zone" key={zone.id}>
               <div className="zone-number">0{index + 1}</div>
@@ -1564,88 +1643,37 @@ function IndexView({
                 </button>
               </div>
               <p className="zone-description">{zone.description}</p>
-              <ul>
-                {zoneChildren.map((child) => {
-                  const displayChild = displayNodes[child.id];
-                  return (
-                    <li key={child.id}>
-                      <span className="index-signals" aria-hidden="true">
-                        {statusesVisible ? (
-                          <i
-                            className={`index-status status-sensitive ${statusClass(
-                              getNodeSignal(displayChild),
-                            )}`}
-                          />
-                        ) : null}
-                        {displayChild.visibility !== "public" ? (
-                          <i
-                            className={`index-access ${visibilityClass(
-                              displayChild.visibility,
-                            )}`}
-                          />
-                        ) : null}
-                      </span>
-                      <span>{displayChild.label}</span>
-                      <small>
-                        {getNodeDisplaySummary(displayChild, statusesVisible)}
-                      </small>
-                    </li>
-                  );
-                })}
-              </ul>
-              {indexedSection ? (
-                <section
-                  className="index-projects"
-                  aria-label={indexedSection.label}
-                >
-                  <p>{indexedSection.label}</p>
-                  <ul>
-                    {indexedSection.nodes.map((indexedNode) => {
-                      const displayNode = displayNodes[indexedNode.id];
-                      return (
-                        <li key={indexedNode.id}>
-                          <span className="index-signals" aria-hidden="true">
-                            {statusesVisible ? (
-                              <i
-                                className={`index-status status-sensitive ${statusClass(
-                                  getNodeSignal(displayNode),
-                                )}`}
-                              />
-                            ) : null}
-                            {displayNode.visibility !== "public" ? (
-                              <i
-                                className={`index-access ${visibilityClass(
-                                  displayNode.visibility,
-                                )}`}
-                              />
-                            ) : null}
-                          </span>
-                          <span className="index-project-copy">
-                            {displayNode.href ? (
-                              <a href={displayNode.href}>
-                                {displayNode.label}
-                              </a>
-                            ) : (
-                              <strong>{displayNode.label}</strong>
-                            )}
-                            <span>{displayNode.description}</span>
-                          </span>
-                          <small>
-                            {getNodeDisplaySummary(
-                              displayNode,
-                              statusesVisible,
-                            )}
-                          </small>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              ) : null}
+              <IndexTree
+                nodeIds={zone.children ?? []}
+                displayNodes={displayNodes}
+                statusesVisible={statusesVisible}
+              />
             </article>
           );
         })}
       </div>
+
+      <section className="index-connections" aria-labelledby="connections-title">
+        <details>
+          <summary>
+            <span>
+              <small>Map relationships</small>
+              <strong id="connections-title">Connections</strong>
+            </span>
+            <span>{hubAssociations.length} dotted associations</span>
+          </summary>
+          <ul>
+            {hubAssociations.map((connection) => (
+              <li key={`${connection.source}-${connection.target}`}>
+                <strong>{displayNodes[connection.source].label}</strong>
+                <span>{connection.label}</span>
+                <strong>{displayNodes[connection.target].label}</strong>
+                {connection.networkFlow ? <small>network path</small> : null}
+              </li>
+            ))}
+          </ul>
+        </details>
+      </section>
 
       <footer className="index-footer">
         <span>ES/HUB — Local prototype</span>

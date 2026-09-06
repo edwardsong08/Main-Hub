@@ -28,6 +28,7 @@ const personalMonitorMapping: KumaMonitorMapping = {
     7: "fourme",
     8: "main-hub-project",
     9: "documenso",
+    10: "stirling-pdf",
   },
   names: {
     "home lab services": "homelab-services",
@@ -39,6 +40,7 @@ const personalMonitorMapping: KumaMonitorMapping = {
     "4me os": "fourme",
     "main hub": "main-hub-project",
     documenso: "documenso",
+    "stirling pdf": "stirling-pdf",
   },
 };
 

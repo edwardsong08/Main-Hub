@@ -2,12 +2,16 @@
 
 This runbook defines Edward's shorthand requests to "update the hub," "update
 it all," or perform the recurring Hub update. Unless the prompt narrows the
-scope, those phrases mean a complete production reconciliation across the
-Edward Coolify project, Main Hub, and personal Uptime Kuma.
+scope, those phrases mean a complete production reconciliation across Edward's
+personal Coolify portfolio, Main Hub, and personal Uptime Kuma.
 
 ## Reconciliation workflow
 
-1. Inventory the Edward project in Coolify.
+1. Inventory Edward's personal Coolify portfolio.
+   - Begin at the Coolify Projects list instead of relying on a historical
+     project or environment URL. Audit the current 4ME OS, Edward Song,
+     Infrastructure, Personal Services, and Ryu Legal projects plus any newly
+     added project.
    - Record environments, resource names, lifecycle state, public domains, and
      high-level storage or dependency relationships.
    - Check whether previously mapped services changed or disappeared.
@@ -49,8 +53,8 @@ Edward Coolify project, Main Hub, and personal Uptime Kuma.
 
 ## Scope boundaries
 
-- The default recurring scope is the Edward Coolify project, the personal Kuma
-  instance at `kuma.edsong.xyz`, and this Main Hub repository/site.
+- The default recurring scope is Edward's personal Coolify portfolio, the
+  personal Kuma instance at `kuma.edsong.xyz`, and this Main Hub repository/site.
 - TROA, Ryu-owned infrastructure, unrelated repositories, and private hardware
   configuration are not mutated unless the specific update requires them.
 - Public copy stays descriptive and useful without exposing private topology.

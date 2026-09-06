@@ -57,6 +57,7 @@ export const hubAssociations: readonly HubAssociation[] = [
   association("coolify", "main-hub-project", "deploys", "deploys", true),
   association("coolify", "fourme", "deploys", "deploys", true),
   association("coolify", "documenso", "deploys", "deploys", true),
+  association("coolify", "stirling-pdf", "deploys", "deploys", true),
   association("coolify", "jellyfin", "deploys", "deploys", true),
   association(
     "uptime-kuma",
@@ -93,6 +94,14 @@ export const hubAssociations: readonly HubAssociation[] = [
   association(
     "uptime-kuma",
     "documenso",
+    "monitors",
+    "monitors",
+    false,
+    "source-to-target",
+  ),
+  association(
+    "uptime-kuma",
+    "stirling-pdf",
     "monitors",
     "monitors",
     false,
@@ -141,6 +150,14 @@ export const hubAssociations: readonly HubAssociation[] = [
   association(
     "cloudflare",
     "documenso",
+    "routes",
+    "routes",
+    false,
+    "source-to-target",
+  ),
+  association(
+    "cloudflare",
+    "stirling-pdf",
     "routes",
     "routes",
     false,

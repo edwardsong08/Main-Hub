@@ -58,6 +58,7 @@ The current monitor-to-node mapping is intentionally explicit:
 | 4ME OS | 7 | `fourme` |
 | Main Hub | 8 | `main-hub-project` |
 | Documenso | 9 | `documenso` |
+| Stirling PDF | 10 | `stirling-pdf` |
 
 TROA's public game-server page is mapped separately so its monitor IDs cannot
 collide with the personal Kuma instance:

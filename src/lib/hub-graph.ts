@@ -79,7 +79,7 @@ export const hubNodes: Record<string, HubNode> = {
     eyebrow: "Ecosystem",
     description: "A living index of work, systems, projects, and notes.",
     kind: "origin",
-    children: ["troa", "ryu", "personal", "homelab", "projects"],
+    children: ["personal", "homelab", "projects", "troa", "ryu"],
   }),
 
   troa: defineNode({
@@ -1041,7 +1041,13 @@ export const hubNodes: Record<string, HubNode> = {
     description: "Useful self-hosted applications and personal tools.",
     kind: "group",
     visibility: "abstracted",
-    children: ["penpot", "documenso", "jellyfin", "self-hosted-software"],
+    children: [
+      "penpot",
+      "documenso",
+      "stirling-pdf",
+      "jellyfin",
+      "self-hosted-software",
+    ],
   }),
   penpot: defineNode({
     id: "penpot",
@@ -1057,6 +1063,16 @@ export const hubNodes: Record<string, HubNode> = {
     eyebrow: "Services",
     description:
       "Private document signing and agreement workflows, self-hosted through the Homelab.",
+    kind: "service",
+    visibility: "private",
+    health: "unknown",
+  }),
+  "stirling-pdf": defineNode({
+    id: "stirling-pdf",
+    label: "Stirling PDF",
+    eyebrow: "Services",
+    description:
+      "Private, self-hosted PDF conversion, repair, and document utility workspace.",
     kind: "service",
     visibility: "private",
     health: "unknown",

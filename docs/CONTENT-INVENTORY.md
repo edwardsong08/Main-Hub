@@ -35,14 +35,16 @@ Initial monitored services:
 - Profile site
 - Penpot
 - Documenso
+- Stirling PDF
 - Jellyfin
 - Each currently live public project
 - Any public tool whose availability matters to visitors
 
 Current personal coverage includes the Profile Site, Main Hub, 4ME OS,
-Documenso, Penpot, Jellyfin, ClaimChain, and OpenBid. Main Hub observes its
-public landing page, 4ME OS uses its public liveness endpoint, and Documenso
-observes its public sign-in surface. ClaimChain and OpenBid use maintained live
+Documenso, Stirling PDF, Penpot, Jellyfin, ClaimChain, and OpenBid. Main Hub
+observes its public landing page, 4ME OS uses its public liveness endpoint,
+Documenso observes its public sign-in surface, and Stirling PDF observes its
+public application entry point. ClaimChain and OpenBid use maintained live
 Vercel endpoints; their primary delivery platforms are AWS and Render
 respectively.
 Platform ownership and endpoint follow-up are documented in `PROJECT-STATUS.md`.
@@ -126,6 +128,8 @@ This page explains the tools that are useful, interesting, or part of the self-h
 Possible entries:
 
 - Penpot
+- Documenso
+- Stirling PDF
 - Jellyfin
 - Uptime Kuma
 - Coolify

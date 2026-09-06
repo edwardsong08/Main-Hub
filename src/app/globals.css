@@ -2644,7 +2644,38 @@ html[data-theme] .node-drawer {
   .hub-mark, .mode-toggle button, .settings-trigger, .zone-heading button { min-height: 44px; }
 }
 
+/* The portfolio hint belongs to MapView, never to the surrounding iframe. */
+.hub-shell[data-profile-embed] .map-help {
+  display: flex;
+  bottom: 12px;
+  left: 18px;
+  padding: 6px 8px;
+  background: rgb(var(--ink-rgb) / .84);
+  font-size: 9px;
+  line-height: 1.65;
+  pointer-events: none;
+}
+
+.embed-touch-help { display: none; }
+
+@media (pointer: fine) {
+  .hub-shell[data-profile-embed] .scroll-mark { width: 17px; height: 27px; }
+  .hub-shell[data-profile-embed] .scroll-mark::after {
+    top: 5px;
+    left: 7px;
+    width: 1px;
+    height: 5px;
+    animation: scroll-cue 1.8s ease-in-out infinite;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .embed-mouse-help { display: none; }
+  .embed-touch-help { display: inline; }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .hub-shell[data-profile-embed] .scroll-mark::after { animation: none; }
   .world-network-flow { display: none; }
   *, *::before, *::after {
     scroll-behavior: auto !important;

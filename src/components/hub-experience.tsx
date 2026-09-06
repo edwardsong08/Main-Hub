@@ -680,12 +680,14 @@ function WorldAtmosphere({
 }
 
 function MapView({
+  profileEmbed = false,
   focusId,
   liveStatusSnapshot,
   networkActivityEnabled,
   statusVisibility,
   onFocusChange,
 }: {
+  profileEmbed?: boolean;
   focusId: string;
   liveStatusSnapshot: HubLiveStatusSnapshot | null;
   networkActivityEnabled: boolean;
@@ -1398,6 +1400,12 @@ function MapView({
 
         <div className="map-help" aria-hidden="true">
           <span className="scroll-mark"><i /></span>
+          {profileEmbed ? (
+            <>
+              <span className="embed-mouse-help">move through a territory<br />scroll in · out</span>
+              <span className="embed-touch-help">tap a territory<br />use path to return</span>
+            </>
+          ) : (
           <span>
             {viewportProfile === "desktop"
               ? intentId
@@ -1407,6 +1415,7 @@ function MapView({
             <br />
             {viewportProfile === "desktop" ? "scroll in · out" : "use path to return"}
           </span>
+          )}
         </div>
 
         <div className="relationship-key" aria-hidden="true">
@@ -1689,7 +1698,7 @@ function IndexView({
   );
 }
 
-export function HubExperience() {
+export function HubExperience({ profileEmbed = false }: { profileEmbed?: boolean }) {
   const [mode, setMode] = useState<ViewMode>("map");
   const [focusId, setFocusId] = useState(rootNodeId);
   const [networkActivityEnabled, setNetworkActivityEnabled] =
@@ -1717,6 +1726,7 @@ export function HubExperience() {
   return (
     <div
       className={`hub-shell mode-${mode}`}
+      data-profile-embed={profileEmbed || undefined}
       data-theme={theme}
       data-status-visibility={statusVisibility}
     >
@@ -1749,6 +1759,7 @@ export function HubExperience() {
 
       {mode === "map" ? (
         <MapView
+          profileEmbed={profileEmbed}
           focusId={focusId}
           liveStatusSnapshot={liveStatusSnapshot}
           networkActivityEnabled={networkActivityEnabled}
